@@ -4,7 +4,14 @@ const Product = require('../models/Product');
 const Stock = require('../models/Stock');
 const ActivityLog = require('../models/ActivityLog');
 const { updateTransferStatus } = require('../services/transferService');
-const { notifyTransferRequestCreated } = require('../services/notificationService');
+const { notifyTransferRequestCreated, notifyTransferStatusChanged } = require('../services/notificationService');
+
+const serializeTransferForRealtime = (transfer) => ({
+  transferId: transfer._id.toString(),
+  status: transfer.status,
+  fromBranchId: transfer.from_branch && transfer.from_branch._id ? transfer.from_branch._id.toString() : transfer.from_branch.toString(),
+  toBranchId: transfer.to_branch && transfer.to_branch._id ? transfer.to_branch._id.toString() : transfer.to_branch.toString()
+});
 
 const getTransfers = async (req, res) => {
   const user = req.user;
@@ -24,7 +31,6 @@ const getTransfers = async (req, res) => {
       .sort({ createdAt: -1 })
       .then(list => list.filter(item => item.product_id !== null));
 
-    // Get list of branches and products for manual request form
     const branches = await Branch.find().sort({ branch_name: 1 });
     const products = await Product.find().sort({ item_name: 1 });
 
@@ -51,7 +57,6 @@ const postCreateTransfer = async (req, res) => {
     const qty = parseInt(quantity, 10);
     const destinationBranchId = user.role === 'Super Admin' ? to_branch : user.branch_id._id.toString();
 
-    // Fetch lists to render view on validation error
     const transfersQuery = {};
     if (user.role !== 'Super Admin') {
       transfersQuery.$or = [
@@ -77,7 +82,6 @@ const postCreateTransfer = async (req, res) => {
       });
     }
 
-    // Verify source branch has some stock
     const sourceStock = await Stock.findOne({ branch_id: from_branch, product_id });
     const available = sourceStock ? sourceStock.quantity : 0;
     if (available <= 0) {
@@ -87,7 +91,6 @@ const postCreateTransfer = async (req, res) => {
       });
     }
 
-    // Recommend up to available stock
     const finalQty = Math.min(qty, available);
 
     const newTransfer = new Transfer({
@@ -99,7 +102,6 @@ const postCreateTransfer = async (req, res) => {
     });
     await newTransfer.save();
 
-    // Log Activity
     await new ActivityLog({
       user_id: user._id,
       action: 'CREATE_TRANSFER',
@@ -107,7 +109,6 @@ const postCreateTransfer = async (req, res) => {
       ip_address: req.ip || req.connection.remoteAddress
     }).save();
 
-    // Trigger targeted notifications without affecting transfer creation flow
     const io = req.app.get('io');
     try {
       await notifyTransferRequestCreated({ transferId: newTransfer._id, io });
@@ -115,11 +116,11 @@ const postCreateTransfer = async (req, res) => {
       console.error('Transfer notification dispatch failed:', notificationError);
     }
 
-    // Preserve the existing global dashboard stream event
     if (io) {
       io.emit('dashboardUpdate', {
         type: 'TRANSFER_CREATE',
-        message: 'New stock transfer request pending.'
+        message: 'New stock transfer request pending.',
+        transfer: serializeTransferForRealtime(newTransfer)
       });
     }
 
@@ -145,9 +146,6 @@ const postUpdateStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Transfer request not found.' });
     }
 
-    // Role and branch authorization checks:
-    // Supplying branch manager handles Approve, Pick, Ship, Reject.
-    // Receiving branch manager handles Delivered.
     if (user.role !== 'Super Admin') {
       const isFromBranch = user.branch_id && user.branch_id._id.toString() === transfer.from_branch._id.toString();
       const isToBranch = user.branch_id && user.branch_id._id.toString() === transfer.to_branch._id.toString();
@@ -165,10 +163,8 @@ const postUpdateStatus = async (req, res) => {
       }
     }
 
-    // Call service to process transition (updates database & triggers stock adjustment on Delivered)
     await updateTransferStatus(id, status, user._id);
 
-    // Log Activity
     await new ActivityLog({
       user_id: user._id,
       action: 'UPDATE_TRANSFER',
@@ -176,16 +172,28 @@ const postUpdateStatus = async (req, res) => {
       ip_address: req.ip || req.connection.remoteAddress
     }).save();
 
-    // Trigger Socket updates
+    const updatedTransfer = await Transfer.findById(id).populate('from_branch').populate('to_branch').populate('product_id');
+
     const io = req.app.get('io');
+    try {
+      await notifyTransferStatusChanged({ transferId: updatedTransfer._id, status, io });
+    } catch (notificationError) {
+      console.error('Transfer status notification dispatch failed:', notificationError);
+    }
+
     if (io) {
       io.emit('dashboardUpdate', {
         type: 'TRANSFER_UPDATE',
-        message: `Transfer status updated to ${status}`
+        message: `Transfer status updated to ${status}`,
+        transfer: serializeTransferForRealtime(updatedTransfer)
       });
     }
 
-    res.json({ success: true, message: `Transfer status successfully updated to ${status}.` });
+    res.json({
+      success: true,
+      message: `Transfer status successfully updated to ${status}.`,
+      transfer: serializeTransferForRealtime(updatedTransfer)
+    });
   } catch (error) {
     console.error('Error updating transfer status:', error);
     res.status(500).json({ success: false, message: error.message });

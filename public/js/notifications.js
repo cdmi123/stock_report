@@ -26,7 +26,7 @@
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/\"/g, '&quot;')
+        .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
     };
 
@@ -212,17 +212,21 @@
       });
 
       socket.on('dashboardUpdate', (payload) => {
-        if (!payload || payload.type === 'TRANSFER_CREATE') {
+        if (!payload) {
+          return;
+        }
+
+        if (payload.type === 'TRANSFER_CREATE' || payload.type === 'TRANSFER_UPDATE') {
           return;
         }
 
         addNotification({
           id: `dashboard-${payload.type}-${Date.now()}`,
-          title: payload.type === 'TRANSFER_UPDATE' ? 'Transfer Update' : 'ERP Update',
+          title: 'ERP Update',
           message: payload.message,
           createdAt: new Date().toISOString(),
           isRead: false,
-          url: payload.type === 'TRANSFER_UPDATE' ? transferUrl : window.location.pathname
+          url: window.location.pathname
         });
       });
     };

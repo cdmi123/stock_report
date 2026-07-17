@@ -42,7 +42,7 @@
           </h5>
           
           <div class="table-responsive">
-            <table class="table table-hover align-middle datatable">
+            <table class="table table-hover align-middle datatable" id="transfers-table">
               <thead>
                 <tr>
                   <th>Requested Date</th>
@@ -58,7 +58,16 @@
               </thead>
               <tbody>
                 <% transfers.forEach(t => { %>
-                  <tr>
+                  <% 
+                    let badgeClass = 'bg-secondary';
+                    if (t.status === 'Pending') badgeClass = 'bg-warning text-dark';
+                    if (t.status === 'Approved') badgeClass = 'bg-info text-dark';
+                    if (t.status === 'Picked') badgeClass = 'bg-secondary text-white';
+                    if (t.status === 'In Transit') badgeClass = 'bg-primary';
+                    if (t.status === 'Delivered') badgeClass = 'bg-success';
+                    if (t.status === 'Rejected') badgeClass = 'bg-danger';
+                  %>
+                  <tr id="transfer-row-<%= t._id %>" data-transfer-id="<%= t._id %>" data-from-branch-id="<%= t.from_branch._id %>" data-to-branch-id="<%= t.to_branch._id %>">
                     <td class="small text-muted"><%= new Date(t.createdAt).toLocaleDateString('en-IN') %></td>
                     <td>
                       <div class="fw-bold"><%= t.product_id.item_name %></div>
@@ -67,20 +76,11 @@
                     <td class="text-end fw-bold text-primary px-3"><%= t.quantity %></td>
                     <td><span class="small fw-semibold text-secondary"><%= t.from_branch.branch_name %></span></td>
                     <td><span class="small fw-semibold text-secondary"><%= t.to_branch.branch_name %></span></td>
-                    <td>
-                      <% 
-                        let badgeClass = 'bg-secondary';
-                        if (t.status === 'Pending') badgeClass = 'bg-warning text-dark';
-                        if (t.status === 'Approved') badgeClass = 'bg-info text-dark';
-                        if (t.status === 'Picked') badgeClass = 'bg-secondary text-white';
-                        if (t.status === 'In Transit') badgeClass = 'bg-primary';
-                        if (t.status === 'Delivered') badgeClass = 'bg-success';
-                        if (t.status === 'Rejected') badgeClass = 'bg-danger';
-                      %>
+                    <td id="transfer-status-<%= t._id %>">
                       <span class="badge <%= badgeClass %> px-2.5 py-1.5"><%= t.status %></span>
                     </td>
                     <% if (role !== 'Staff User') { %>
-                      <td class="text-end">
+                      <td class="text-end" id="transfer-actions-<%= t._id %>">
                         <div class="btn-group btn-group-sm" role="group">
                           <!-- Supplying Branch Manager Actions -->
                           <% if (role === 'Super Admin' || (userBranchId && userBranchId === t.from_branch._id.toString())) { %>
@@ -183,6 +183,75 @@
 <% } %>
 
 <script>
+  const TRANSFER_PAGE_ROLE = '<%= role %>';
+  const TRANSFER_PAGE_USER_BRANCH_ID = '<%= userBranchId || '' %>';
+
+  function getTransferBadgeClass(status) {
+    if (status === 'Pending') return 'bg-warning text-dark';
+    if (status === 'Approved') return 'bg-info text-dark';
+    if (status === 'Picked') return 'bg-secondary text-white';
+    if (status === 'In Transit') return 'bg-primary';
+    if (status === 'Delivered') return 'bg-success';
+    if (status === 'Rejected') return 'bg-danger';
+    return 'bg-secondary';
+  }
+
+  function renderTransferActions(transfer) {
+    if (TRANSFER_PAGE_ROLE === 'Staff User') {
+      return '';
+    }
+
+    const isSuperAdmin = TRANSFER_PAGE_ROLE === 'Super Admin';
+    const isFromBranch = isSuperAdmin || (TRANSFER_PAGE_USER_BRANCH_ID && TRANSFER_PAGE_USER_BRANCH_ID === transfer.fromBranchId);
+    const isToBranch = isSuperAdmin || (TRANSFER_PAGE_USER_BRANCH_ID && TRANSFER_PAGE_USER_BRANCH_ID === transfer.toBranchId);
+
+    let html = '<div class="btn-group btn-group-sm" role="group">';
+
+    if (isFromBranch) {
+      if (transfer.status === 'Pending') {
+        html += `<button class="btn btn-success" onclick="updateStatus('${transfer.transferId}', 'Approved')" title="Approve Transfer"><i class="bi bi-check-lg"></i></button>`;
+        html += `<button class="btn btn-danger" onclick="updateStatus('${transfer.transferId}', 'Rejected')" title="Reject Transfer"><i class="bi bi-x-lg"></i></button>`;
+      }
+      if (transfer.status === 'Approved') {
+        html += `<button class="btn btn-secondary" onclick="updateStatus('${transfer.transferId}', 'Picked')"><i class="bi bi-box-seam me-1"></i>Pick</button>`;
+      }
+      if (transfer.status === 'Picked') {
+        html += `<button class="btn btn-primary" onclick="updateStatus('${transfer.transferId}', 'In Transit')"><i class="bi bi-truck me-1"></i>Ship</button>`;
+      }
+    }
+
+    if (isToBranch && transfer.status === 'In Transit') {
+      html += `<button class="btn btn-success" onclick="updateStatus('${transfer.transferId}', 'Delivered')"><i class="bi bi-house-check me-1"></i>Receive</button>`;
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  function applyTransferUpdate(transfer) {
+    if (!transfer || !transfer.transferId || !transfer.status) return;
+
+    const row = document.getElementById(`transfer-row-${transfer.transferId}`);
+    if (!row) return;
+
+    if (!transfer.fromBranchId) {
+      transfer.fromBranchId = row.dataset.fromBranchId || '';
+    }
+    if (!transfer.toBranchId) {
+      transfer.toBranchId = row.dataset.toBranchId || '';
+    }
+
+    const statusCell = document.getElementById(`transfer-status-${transfer.transferId}`);
+    if (statusCell) {
+      statusCell.innerHTML = `<span class="badge ${getTransferBadgeClass(transfer.status)} px-2.5 py-1.5">${transfer.status}</span>`;
+    }
+
+    const actionsCell = document.getElementById(`transfer-actions-${transfer.transferId}`);
+    if (actionsCell) {
+      actionsCell.innerHTML = renderTransferActions(transfer);
+    }
+  }
+
   function updateStatus(id, newStatus) {
     if (!confirm(`Are you sure you want to change the transfer status to "${newStatus}"?`)) {
       return;
@@ -200,7 +269,9 @@
     .then(data => {
       if (data.success) {
         alert(data.message);
-        window.location.reload();
+        if (data.transfer) {
+          applyTransferUpdate(data.transfer);
+        }
       } else {
         alert('Error: ' + data.message);
       }
@@ -211,7 +282,6 @@
     });
   }
 
-  // Pre-fill and lock supplying branch based on recommendation query params
   document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const productId = urlParams.get('product_id');
@@ -219,13 +289,11 @@
     const quantity = urlParams.get('quantity');
 
     if (productId && fromBranchId) {
-      // 1. Pre-select product
       const productSelect = document.getElementById('product_id');
       if (productSelect) {
         productSelect.value = productId;
       }
 
-      // 2. Remove all supplying branches except the recommended one
       const fromBranchSelect = document.getElementById('from_branch');
       if (fromBranchSelect) {
         Array.from(fromBranchSelect.options).forEach(opt => {
@@ -236,13 +304,11 @@
         fromBranchSelect.value = fromBranchId;
       }
 
-      // 3. Pre-fill quantity
       const quantityInput = document.getElementById('quantity');
       if (quantityInput && quantity) {
         quantityInput.value = quantity;
       }
 
-      // 4. Show the Request Stock Modal immediately
       const modalEl = document.getElementById('requestStockModal');
       if (modalEl) {
         const requestModal = new bootstrap.Modal(modalEl);
@@ -252,20 +318,16 @@
 
     if (typeof io !== 'undefined') {
       const socket = io();
-      let isRefreshingTransfers = false;
 
       socket.on('dashboardUpdate', function(data) {
-        if (!data || !data.type) return;
+        if (!data || data.type !== 'TRANSFER_UPDATE' || !data.transfer) {
+          return;
+        }
 
-        const shouldRefreshTransfers = data.type === 'TRANSFER_CREATE' || data.type === 'TRANSFER_UPDATE';
-        if (!shouldRefreshTransfers || isRefreshingTransfers) return;
-
-        isRefreshingTransfers = true;
-        window.location.reload();
+        applyTransferUpdate(data.transfer);
       });
     }
   });
 </script>
 
 <%- include('../partials/footer') %>
-

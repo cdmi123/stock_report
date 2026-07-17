@@ -38,12 +38,39 @@ const serializeNotification = (notification) => ({
   url: '/transfer-requests'
 });
 
-const buildTransferMessage = (transfer) => {
-  const requester = transfer.from_branch.city || transfer.from_branch.branch_name;
+const buildProductLabel = (transfer) => {
   const itemName = transfer.product_id.item_name || 'Product';
   const designNo = transfer.product_id.design_no ? ` ${transfer.product_id.design_no}` : '';
   const size = transfer.product_id.size ? ` Size ${transfer.product_id.size}` : '';
-  return `${requester} requested ${itemName}${designNo}${size} Qty ${transfer.quantity}`.trim();
+  return `${itemName}${designNo}${size}`.trim();
+};
+
+const buildTransferRequestMessage = (transfer) => {
+  const requester = transfer.from_branch.city || transfer.from_branch.branch_name;
+  return `${requester} requested ${buildProductLabel(transfer)} Qty ${transfer.quantity}`.trim();
+};
+
+const buildTransferStatusMessage = (transfer, status) => {
+  const sourceName = transfer.from_branch.branch_name;
+  const destinationName = transfer.to_branch.branch_name;
+  const productLabel = buildProductLabel(transfer);
+
+  if (status === 'Approved') {
+    return `${sourceName} approved ${productLabel} Qty ${transfer.quantity} for ${destinationName}`;
+  }
+  if (status === 'Picked') {
+    return `${sourceName} picked ${productLabel} Qty ${transfer.quantity} for ${destinationName}`;
+  }
+  if (status === 'In Transit') {
+    return `${sourceName} shipped ${productLabel} Qty ${transfer.quantity} to ${destinationName}`;
+  }
+  if (status === 'Delivered') {
+    return `${destinationName} received ${productLabel} Qty ${transfer.quantity}`;
+  }
+  if (status === 'Rejected') {
+    return `${sourceName} rejected ${productLabel} Qty ${transfer.quantity} for ${destinationName}`;
+  }
+  return `Transfer updated to ${status} for ${productLabel} Qty ${transfer.quantity}`;
 };
 
 const sendPushNotifications = async (subscriptions, payload) => {
@@ -69,28 +96,21 @@ const sendPushNotifications = async (subscriptions, payload) => {
   }
 };
 
-const notifyTransferRequestCreated = async ({ transferId, io }) => {
-  const transfer = await Transfer.findById(transferId)
-    .populate('from_branch')
-    .populate('to_branch')
-    .populate('product_id');
-
-  if (!transfer || !transfer.to_branch || !transfer.product_id) {
+const dispatchTransferNotifications = async ({ transfer, io, title, message, branchIds }) => {
+  const normalizedBranchIds = [...new Set((branchIds || []).filter(Boolean).map((id) => id.toString()))];
+  if (normalizedBranchIds.length === 0) {
     return [];
   }
 
-  const recipients = await User.find({ branch_id: transfer.to_branch._id }).select('_id branch_id');
+  const recipients = await User.find({ branch_id: { $in: normalizedBranchIds } }).select('_id branch_id');
   if (recipients.length === 0) {
     return [];
   }
 
-  const title = 'New Product Request';
-  const message = buildTransferMessage(transfer);
-
   const insertedNotifications = await Notification.insertMany(
     recipients.map((recipient) => ({
       user_id: recipient._id,
-      branch_id: transfer.to_branch._id,
+      branch_id: recipient.branch_id,
       transfer_id: transfer._id,
       title,
       message,
@@ -112,8 +132,8 @@ const notifyTransferRequestCreated = async ({ transferId, io }) => {
     const pushPayload = {
       title,
       message,
-      branchId: transfer.to_branch._id,
-      transferId: transfer._id,
+      branchId: normalizedBranchIds[0],
+      transferId: transfer._id.toString(),
       createdAt: insertedNotifications[0].createdAt,
       isRead: false,
       url: '/transfer-requests'
@@ -124,8 +144,47 @@ const notifyTransferRequestCreated = async ({ transferId, io }) => {
   return insertedNotifications;
 };
 
-module.exports = {
-  notifyTransferRequestCreated,
-  serializeNotification
+const loadTransferWithRelations = async (transferId) => {
+  return Transfer.findById(transferId)
+    .populate('from_branch')
+    .populate('to_branch')
+    .populate('product_id');
 };
 
+const notifyTransferRequestCreated = async ({ transferId, io }) => {
+  const transfer = await loadTransferWithRelations(transferId);
+
+  if (!transfer || !transfer.from_branch || !transfer.to_branch || !transfer.product_id) {
+    return [];
+  }
+
+  return dispatchTransferNotifications({
+    transfer,
+    io,
+    title: 'New Product Request',
+    message: buildTransferRequestMessage(transfer),
+    branchIds: [transfer.from_branch._id, transfer.to_branch._id]
+  });
+};
+
+const notifyTransferStatusChanged = async ({ transferId, status, io }) => {
+  const transfer = await loadTransferWithRelations(transferId);
+
+  if (!transfer || !transfer.from_branch || !transfer.to_branch || !transfer.product_id) {
+    return [];
+  }
+
+  return dispatchTransferNotifications({
+    transfer,
+    io,
+    title: `Transfer ${status}`,
+    message: buildTransferStatusMessage(transfer, status),
+    branchIds: [transfer.from_branch._id, transfer.to_branch._id]
+  });
+};
+
+module.exports = {
+  notifyTransferRequestCreated,
+  notifyTransferStatusChanged,
+  serializeNotification
+};
