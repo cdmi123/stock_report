@@ -46,7 +46,7 @@ const buildProductLabel = (transfer) => {
 };
 
 const buildTransferRequestMessage = (transfer) => {
-  const requester = transfer.from_branch.city || transfer.from_branch.branch_name;
+  const requester = transfer.to_branch.branch_name;
   return `${requester} requested ${buildProductLabel(transfer)} Qty ${transfer.quantity}`.trim();
 };
 
@@ -163,7 +163,7 @@ const notifyTransferRequestCreated = async ({ transferId, io }) => {
     io,
     title: 'New Product Request',
     message: buildTransferRequestMessage(transfer),
-    branchIds: [transfer.from_branch._id, transfer.to_branch._id]
+    branchIds: [transfer.from_branch._id]
   });
 };
 
@@ -174,12 +174,19 @@ const notifyTransferStatusChanged = async ({ transferId, status, io }) => {
     return [];
   }
 
+  let branchIds = [];
+  if (['Approved', 'Picked', 'In Transit', 'Rejected'].includes(status)) {
+    branchIds = [transfer.to_branch._id];
+  } else if (status === 'Delivered') {
+    branchIds = [transfer.from_branch._id];
+  }
+
   return dispatchTransferNotifications({
     transfer,
     io,
     title: `Transfer ${status}`,
     message: buildTransferStatusMessage(transfer, status),
-    branchIds: [transfer.from_branch._id, transfer.to_branch._id]
+    branchIds
   });
 };
 
