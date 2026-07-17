@@ -249,7 +249,23 @@
         requestModal.show();
       }
     }
+
+    if (typeof io !== 'undefined') {
+      const socket = io();
+      let isRefreshingTransfers = false;
+
+      socket.on('dashboardUpdate', function(data) {
+        if (!data || !data.type) return;
+
+        const shouldRefreshTransfers = data.type === 'TRANSFER_CREATE' || data.type === 'TRANSFER_UPDATE';
+        if (!shouldRefreshTransfers || isRefreshingTransfers) return;
+
+        isRefreshingTransfers = true;
+        window.location.reload();
+      });
+    }
   });
 </script>
 
 <%- include('../partials/footer') %>
+
