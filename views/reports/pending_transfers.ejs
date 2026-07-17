@@ -1,0 +1,74 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-4 fade-in-up">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+      <h4 class="fw-bold mb-0"><i class="bi bi-hourglass-split me-2 text-warning"></i>Pending Transfers Report</h4>
+      <a href="/reports" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Hub</a>
+    </div>
+
+    <!-- Filter (Super Admin only) -->
+    <% if (role === 'Super Admin') { %>
+      <div class="erp-card mb-4">
+        <form action="/reports/pending-transfers" method="GET" class="row g-3 align-items-end">
+          <div class="col-md-8">
+            <label for="branchId" class="form-label fw-semibold small text-muted text-uppercase">Filter by Branch (Source or Destination)</label>
+            <select class="form-select" id="branchId" name="branchId">
+              <option value="">All Branches</option>
+              <% branches.forEach(b => { %>
+                <option value="<%= b._id %>" <%= selectedBranch === b._id.toString() ? 'selected' : '' %>><%= b.branch_name %> (<%= b.city %>)</option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <button type="submit" class="btn btn-primary w-100 py-2"><i class="bi bi-funnel-fill me-1"></i>Generate Report</button>
+          </div>
+        </form>
+      </div>
+    <% } %>
+
+    <!-- Report Table -->
+    <div class="erp-card">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle datatable">
+          <thead>
+            <tr>
+              <th>Request Date</th>
+              <th>Product Details</th>
+              <th>Design No</th>
+              <th>Size</th>
+              <th>Colour</th>
+              <th class="text-end">Qty</th>
+              <th>From (Source)</th>
+              <th>To (Destination)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% data.forEach(row => { %>
+              <tr>
+                <td class="small text-muted"><%= new Date(row.createdAt).toLocaleDateString('en-IN') %></td>
+                <td class="fw-bold"><%= row.product_id.item_name %></td>
+                <td><span class="badge bg-secondary bg-opacity-25 text-dark font-monospace"><%= row.product_id.design_no %></span></td>
+                <td class="fw-semibold"><%= row.product_id.size %></td>
+                <td><%= row.product_id.colour || '-' %></td>
+                <td class="text-end fw-bold text-primary"><%= row.quantity %></td>
+                <td><span class="small fw-semibold text-secondary"><%= row.from_branch.branch_name %></span></td>
+                <td><span class="small fw-semibold text-secondary"><%= row.to_branch.branch_name %></span></td>
+                <td>
+                  <span class="badge bg-warning text-dark px-2.5 py-1.5"><%= row.status %></span>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

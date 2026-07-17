@@ -1,0 +1,383 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-4 fade-in-up">
+    
+    <!-- Title & Action Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3 border-bottom pb-3">
+      <div>
+        <h4 class="fw-bold mb-1 d-flex align-items-center gap-2">
+          <i class="bi bi-file-earmark-spreadsheet text-success"></i> Sales Sheet Import Preview
+        </h4>
+        <p class="text-muted small mb-0">File: <strong><%= session.filename %></strong> | Uploaded for branch: <strong><%= session.branch_id.branch_name %></strong></p>
+      </div>
+      
+      <div class="d-flex align-items-center gap-2">
+        <a href="/sales/upload" class="btn btn-outline-secondary btn-sm px-3 py-2 fw-semibold" style="border-radius: 8px;">
+          Cancel Import
+        </a>
+        <button id="btnCommitImport" class="btn btn-primary btn-sm px-4 py-2 fw-semibold" style="border-radius: 8px;">
+          <i class="bi bi-check-circle me-1"></i> Commit & Finalize Import
+        </button>
+      </div>
+    </div>
+
+    <!-- Interactive Excel Rows List -->
+    <div class="erp-card shadow-sm" style="border-radius: 16px;">
+      <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
+        <i class="bi bi-list-columns-reverse text-primary"></i> Spreadsheet Rows Analysis
+      </h5>
+
+      <div class="table-responsive">
+        <table class="table align-middle preview-table">
+          <thead>
+            <tr>
+              <th style="width: 60px;" class="text-center">Row</th>
+              <th>Variant Listing</th>
+              <th style="width: 100px;" class="text-end">Sold Qty</th>
+              <th style="width: 120px;" class="text-center">Status</th>
+              <th>Allocation recommendations & Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% session.rows.forEach(row => { %>
+              <% const isNetworkAvailable = row.status === 'UNMATCHED' && row.product_id && row.available_branches && row.available_branches.length > 0; %>
+              <% const isNoProductInNetwork = row.status === 'UNMATCHED' && !isNetworkAvailable; %>
+              <tr id="row-<%= row._id %>" class="<%= row.status === 'READY' ? 'table-success bg-opacity-5' : (isNetworkAvailable ? 'table-warning bg-opacity-5' : (row.status === 'UNMATCHED' ? 'table-danger bg-opacity-5' : '')) %>">
+                
+                <!-- Excel Row Number -->
+                <td class="text-center text-muted font-monospace"><%= row.excel_row_number %></td>
+
+                <!-- Variant Info -->
+                <td>
+                  <div class="fw-bold text-main"><%= row.item_name || 'Unmatched Product' %></div>
+                  <small class="text-muted font-monospace">
+                    <%= row.barcode ? row.barcode : 'NO-BARCODE' %> 
+                    <% if (row.design_no) { %>• Design: <%= row.design_no %><% } %>
+                    <% if (row.size) { %>• Size: <%= row.size %><% } %>
+                  </small>
+                </td>
+
+                <!-- Sold Quantity -->
+                <td class="text-end fw-bold font-monospace px-3"><%= row.sold_quantity %></td>
+
+                <!-- Status Badge -->
+                <td class="text-center" id="status-cell-<%= row._id %>">
+                  <% if (row.status === 'READY') { %>
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5"><i class="bi bi-check-circle-fill me-1"></i>Ready</span>
+                  <% } else if (row.status === 'SHORTAGE') { %>
+                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2.5 py-1.5"><i class="bi bi-exclamation-triangle-fill me-1"></i>Shortage</span>
+                  <% } else if (row.status === 'HOLD') { %>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1.5"><i class="bi bi-pause-circle-fill me-1"></i>On Hold</span>
+                  <% } else if (isNetworkAvailable) { %>
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1.5"><i class="bi bi-diagram-3-fill me-1"></i>Network Available</span>
+                  <% } else { %>
+                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2.5 py-1.5"><i class="bi bi-x-circle-fill me-1"></i>No Product In Network</span>
+                  <% } %>
+                </td>
+
+                <!-- Recommendations & Actions -->
+                <td id="actions-cell-<%= row._id %>">
+                  <% if (row.status === 'READY') { %>
+                    <div class="text-success small fw-semibold">
+                      <i class="bi bi-check-lg"></i> Sufficient local stock (<%= row.current_branch_qty %> pcs) available. Ready to commit.
+                    </div>
+                  <% } else if (row.status === 'UNMATCHED') { %>
+                    <% if (isNetworkAvailable) { %>
+                      <div class="allocation-panel shadow-sm">
+                        <div class="row g-3">
+                          <div class="col-md-5 border-end pe-3">
+                            <span class="text-muted d-block small text-uppercase fw-bold">Network Availability</span>
+                            <div class="d-flex align-items-center justify-content-between mt-2">
+                              <span>Local Stock (<%= session.branch_id.branch_name %>):</span>
+                              <span class="badge bg-light text-dark border font-monospace px-2 py-1"><%= row.current_branch_qty %> pcs</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between mt-1">
+                              <span class="text-primary fw-semibold">Required Quantity:</span>
+                              <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 font-monospace px-2 py-1"><%= row.additional_qty_required %> pcs</span>
+                            </div>
+
+                            <% if (row.recommended_branch && row.recommended_branch.branch_name) { %>
+                              <div class="mt-3 bg-light rounded p-2.5 border border-primary border-opacity-10">
+                                <span class="text-muted d-block small text-uppercase fw-bold">Recommended Source</span>
+                                <strong class="text-primary d-block mt-0.5"><i class="bi bi-bookmark-star-fill me-1"></i><%= row.recommended_branch.branch_name %></strong>
+                                <small class="text-muted">Stock: <%= row.recommended_branch.quantity %> pcs available</small>
+                              </div>
+                            <% } %>
+                          </div>
+
+                          <div class="col-md-7 ps-3">
+                            <span class="text-muted d-block small text-uppercase fw-bold mb-2">Available Branches</span>
+
+                            <div class="d-flex flex-column gap-2 mb-3">
+                              <% row.available_branches.forEach(ab => { %>
+                                <div class="d-flex align-items-center justify-content-between bg-white border rounded p-2">
+                                  <div>
+                                    <strong style="font-size: 0.85rem;"><%= ab.branch_name %></strong>
+                                    <small class="text-muted d-block" style="font-size: 0.7rem;">Priority: <%= ab.priority %></small>
+                                  </div>
+                                  <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 font-monospace"><%= ab.quantity %> pcs</span>
+                                </div>
+                              <% }) %>
+                            </div>
+
+                            <% if (row.auto_allocation && row.auto_allocation.length > 1) { %>
+                              <div class="mb-3 bg-light rounded p-2.5 border">
+                                <span class="text-muted d-block small text-uppercase fw-bold mb-1.5"><i class="bi bi-cpu me-1 text-primary"></i>Split Auto-Allocation Recommendation</span>
+                                <div class="d-flex flex-column gap-1 small">
+                                  <% row.auto_allocation.forEach(alloc => { %>
+                                    <div class="d-flex justify-content-between text-secondary">
+                                      <span><%= alloc.branch_name %>:</span>
+                                      <strong class="font-monospace text-dark">+<%= alloc.quantity %> pcs</strong>
+                                    </div>
+                                  <% }) %>
+                                </div>
+                              </div>
+                            <% } %>
+
+                            <div class="action-btn-group d-flex flex-wrap gap-2">
+                              <% if (row.auto_allocation && row.auto_allocation.length > 1) { %>
+                                <button class="btn btn-primary btn-sm" onclick="triggerRowAction('<%= session._id %>', '<%= row._id %>', 'AUTO_ALLOCATE')">
+                                  <i class="bi bi-cpu me-1"></i>Auto Allocate Stock
+                                </button>
+                              <% } else { %>
+                                <button class="btn btn-primary btn-sm" onclick="triggerRowAction('<%= session._id %>', '<%= row._id %>', 'CREATE_TRANSFER')">
+                                  <i class="bi bi-shuffle me-1"></i>Create Transfer Request
+                                </button>
+                              <% } %>
+                              <button class="btn btn-outline-success btn-sm" onclick="triggerRowAction('<%= session._id %>', '<%= row._id %>', 'RESERVE_STOCK')">
+                                <i class="bi bi-bookmark-check me-1"></i>Reserve Stock
+                              </button>
+                              <button class="btn btn-outline-secondary btn-sm" onclick="triggerRowAction('<%= session._id %>', '<%= row._id %>', 'HOLD_SALE')">Hold Sale</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    <% } else { %>
+                      <div class="text-danger small mb-2"><i class="bi bi-info-circle me-1"></i> This product does not exist in any branch inventory.</div>
+                      <div class="action-btn-group">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="triggerRowAction('<%= session._id %>', '<%= row._id %>', 'HOLD_SALE')">Hold Sale</button>
+                      </div>
+                    <% } %>
+                  <% } else if (row.status === 'HOLD') { %>
+                    <div class="text-muted small">Sale row placed on hold. It will be excluded from final import.</div>
+                  <% } else if (row.status === 'SHORTAGE') { %>
+                    
+                    <!-- Shortage / Allocation Recommendation Panel -->
+                    <div class="allocation-panel shadow-sm">
+                      <div class="row g-3">
+                        
+                        <!-- Left Details Card -->
+                        <div class="col-md-5 border-end pe-3">
+                          <span class="text-muted d-block small text-uppercase fw-bold">Stock Shortage Details</span>
+                          <div class="d-flex align-items-center justify-content-between mt-2">
+                            <span>Local Stock (<%= session.branch_id.branch_name %>):</span>
+                            <span class="badge bg-light text-dark border font-monospace px-2 py-1"><%= row.current_branch_qty %> pcs</span>
+                          </div>
+                          <div class="d-flex align-items-center justify-content-between mt-1">
+                            <span class="text-danger fw-semibold">Shortage Quantity:</span>
+                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 font-monospace px-2 py-1"><%= row.additional_qty_required %> pcs</span>
+                          </div>
+
+                          <% if (row.recommended_branch && row.recommended_branch.branch_name) { %>
+                            <div class="mt-3 bg-light rounded p-2.5 border border-primary border-opacity-10">
+                              <span class="text-muted d-block small text-uppercase fw-bold">Recommended Source</span>
+                              <strong class="text-primary d-block mt-0.5"><i class="bi bi-bookmark-star-fill me-1"></i><%= row.recommended_branch.branch_name %></strong>
+                              <small class="text-muted">Stock: <%= row.recommended_branch.quantity %> pcs available</small>
+                            </div>
+                          <% } else { %>
+                            <div class="mt-3 alert alert-danger p-2 small mb-0">
+                              <i class="bi bi-x-circle me-1"></i> No alternative branches have stock for this item.
+                            </div>
+                          <% } %>
+                        </div>
+
+                        <!-- Right Recommendations List -->
+                        <div class="col-md-7 ps-3">
+                          <span class="text-muted d-block small text-uppercase fw-bold mb-2">Available Source Branches (Priority List)</span>
+                          
+                          <% if (row.available_branches && row.available_branches.length > 0) { %>
+                            <div class="d-flex flex-column gap-2 mb-3">
+                              <% row.available_branches.forEach(ab => { %>
+                                <div class="d-flex align-items-center justify-content-between bg-white border rounded p-2">
+                                  <div class="d-flex align-items-center">
+                                    <% 
+                                      let medal = '';
+                                      if (ab.priority === 1) medal = '🥇';
+                                      else if (ab.priority === 2) medal = '🥈';
+                                      else if (ab.priority === 3) medal = '🥉';
+                                      else medal = '📦';
+                                    %>
+                                    <span class="fs-5 me-1.5"><%= medal %></span>
+                                    <div>
+                                      <strong style="font-size: 0.85rem;"><%= ab.branch_name %></strong>
+                                      <small class="text-muted d-block" style="font-size: 0.7rem;">Priority: <%= ab.priority %></small>
+                                    </div>
+                                  </div>
+                                  <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 font-monospace"><%= ab.quantity %> Available</span>
+                                </div>
+                              <% }) %>
+                            </div>
+
+                            <!-- Auto Allocation Breakdown (if multiple branches split required) -->
+                            <% if (row.auto_allocation && row.auto_allocation.length > 1) { %>
+                              <div class="mb-3 bg-light rounded p-2.5 border">
+                                <span class="text-muted d-block small text-uppercase fw-bold mb-1.5"><i class="bi bi-cpu me-1 text-primary"></i>Split Auto-Allocation Recommendation</span>
+                                <div class="d-flex flex-column gap-1 small">
+                                  <% row.auto_allocation.forEach(alloc => { %>
+                                    <div class="d-flex justify-content-between text-secondary">
+                                      <span><%= alloc.branch_name %>:</span>
+                                      <strong class="font-monospace text-dark">+<%= alloc.quantity %> pcs</strong>
+                                    </div>
+                                  <% }) %>
+                                </div>
+                              </div>
+                            <% } %>
+
+                            <!-- Inline Decision Actions -->
+                            <div class="action-btn-group d-flex flex-wrap gap-2">
+                              <% if (row.auto_allocation && row.auto_allocation.length > 1) { %>
+                                <button class="btn btn-primary btn-sm" onclick="triggerRowAction('<%= session._id %>', '<%= row._id %>', 'AUTO_ALLOCATE')">
+                                  <i class="bi bi-cpu me-1"></i>Auto Allocate Stock
+                                </button>
+                              <% } else { %>
+                                <button class="btn btn-primary btn-sm" onclick="triggerRowAction('<%= session._id %>', '<%= row._id %>', 'CREATE_TRANSFER')">
+                                  <i class="bi bi-shuffle me-1"></i>Create Transfer Request
+                                </button>
+                              <% } %>
+                              <button class="btn btn-outline-success btn-sm" onclick="triggerRowAction('<%= session._id %>', '<%= row._id %>', 'RESERVE_STOCK')">
+                                <i class="bi bi-bookmark-check me-1"></i>Reserve Stock
+                              </button>
+                              <button class="btn btn-outline-secondary btn-sm" onclick="triggerRowAction('<%= session._id %>', '<%= row._id %>', 'HOLD_SALE')">
+                                <i class="bi bi-pause-circle me-1"></i>Hold Sale
+                              </button>
+                            </div>
+                          <% } else { %>
+                            <div class="text-muted small py-3">No other branches currently carry this inventory SKU.</div>
+                            <div class="action-btn-group mt-2">
+                              <button class="btn btn-outline-secondary btn-sm" onclick="triggerRowAction('<%= session._id %>', '<%= row._id %>', 'HOLD_SALE')">Hold Sale</button>
+                            </div>
+                          <% } %>
+                        </div>
+
+                      </div>
+                    </div>
+                    
+                  <% } %>
+                </td>
+
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- AJAX Controller Script -->
+<script>
+  // Trigger single row inline actions (AJAX)
+  function triggerRowAction(sessionId, rowId, actionType) {
+    if (actionType === 'CREATE_TRANSFER' || actionType === 'AUTO_ALLOCATE' || actionType === 'RESERVE_STOCK') {
+      const confirmMsg = actionType === 'RESERVE_STOCK' 
+        ? 'Are you sure you want to reserve this stock? This will allocate inventory in the supplying branch.' 
+        : 'Are you sure you want to request stock transfer operations?';
+      if (!confirm(confirmMsg)) return;
+    }
+
+    fetch('/sales/import/action', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ sessionId, rowId, actionType })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Show success notification and reload/modify row visually
+        alert(data.message);
+        
+        // Dynamically update status cell & action cell so page doesn't need full reload
+        const statusCell = document.getElementById('status-cell-' + rowId);
+        const actionsCell = document.getElementById('actions-cell-' + rowId);
+        const row = document.getElementById('row-' + rowId);
+
+        if (actionType === 'HOLD_SALE') {
+          statusCell.innerHTML = '<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2.5 py-1.5"><i class="bi bi-pause-circle-fill me-1"></i>On Hold</span>';
+          actionsCell.innerHTML = '<div class="text-muted small">Sale row placed on hold. It will be excluded from final import.</div>';
+          row.className = '';
+        } else {
+          // Transfer/Reserve makes it ready
+          statusCell.innerHTML = '<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2.5 py-1.5"><i class="bi bi-check-circle-fill me-1"></i>Ready</span>';
+          actionsCell.innerHTML = '<div class="text-success small fw-semibold"><i class="bi bi-check-lg"></i> Allocation resolved. Staged to import.</div>';
+          row.className = 'table-success bg-opacity-5';
+        }
+      } else {
+        alert('Action Failed: ' + data.message);
+      }
+    })
+    .catch(err => {
+      console.error('AJAX Error:', err);
+      alert('Network request failed. Please check connection.');
+    });
+  }
+
+  // Finalize Import (AJAX)
+  document.getElementById('btnCommitImport').addEventListener('click', function() {
+    // Check if there are remaining shortages
+    const badges = document.querySelectorAll('.preview-table tbody td span.badge');
+    let hasShortages = false;
+    badges.forEach(b => {
+      const label = b.innerText.toLowerCase();
+      if (label.includes('shortage') || label.includes('network available')) {
+        hasShortages = true;
+      }
+    });
+
+    if (hasShortages) {
+      if (!confirm('Warning: You still have items with shortages in this import sheet. They will be ignored/not imported unless you allocate stock or hold them. Do you want to proceed?')) {
+        return;
+      }
+    } else {
+      if (!confirm('Are you sure you want to finalize this import? This will deduct quantities from local stock and create sales logs.')) {
+        return;
+      }
+    }
+
+    fetch('/sales/import/action', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ 
+        sessionId: '<%= session._id %>', 
+        actionType: 'CONFIRM_IMPORT' 
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert(data.message);
+        window.location.href = '/sales';
+      } else {
+        alert('Commit Failed: ' + data.message);
+      }
+    })
+    .catch(err => {
+      console.error('AJAX Error:', err);
+      alert('Network request failed. Please check connection.');
+    });
+  });
+</script>
+
+<%- include('../partials/footer') %>
+

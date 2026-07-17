@@ -1,0 +1,52 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-4 fade-in-up">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+      <h4 class="fw-bold mb-0"><i class="bi bi-trophy me-2 text-primary"></i>Branch Performance Report</h4>
+      <a href="/reports" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Hub</a>
+    </div>
+
+    <!-- Report Table -->
+    <div class="erp-card">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle datatable table-bordered">
+          <thead class="table-dark text-nowrap">
+            <tr>
+              <th>Rank</th>
+              <th>Branch Name</th>
+              <th>City</th>
+              <th>Address</th>
+              <th class="text-end">Units Sold</th>
+              <th class="text-end text-success">Total Revenue</th>
+              <th class="text-end text-muted">Total MRP Value</th>
+              <th class="text-end">Avg Selling Rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% data.forEach((row, index) => { %>
+              <tr>
+                <td class="fw-bold text-muted"><%= index + 1 %></td>
+                <td class="fw-bold text-primary"><%= row.branch.branch_name %></td>
+                <td><%= row.branch.city %></td>
+                <td class="small text-muted text-wrap"><%= row.branch.address %></td>
+                <td class="text-end fw-bold"><%= row.totalSold %></td>
+                <td class="text-end fw-bold text-success">₹<%= row.revenue.toLocaleString('en-IN') %></td>
+                <td class="text-end text-muted small">₹<%= row.mrpRevenue.toLocaleString('en-IN') %></td>
+                <td class="text-end fw-semibold">
+                  ₹<%= row.totalSold > 0 ? (row.revenue / row.totalSold).toFixed(2) : '0.00' %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

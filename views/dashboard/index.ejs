@@ -1,0 +1,403 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <!-- Dashboard Content -->
+  <div class="container-fluid p-3 p-md-4 fade-in-up">
+    
+    <% if (role === 'Super Admin') { %>
+      <!-- Super Admin Dashboard -->
+      <div class="row">
+        <!-- Card 1: Total Products -->
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="erp-card d-flex align-items-center justify-content-between">
+            <div>
+              <span class="text-muted d-block small fw-semibold text-uppercase">Total Products</span>
+              <h2 class="mb-0 fw-bold mt-1"><%= totalProducts %></h2>
+            </div>
+            <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+              <i class="bi bi-tags-fill"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Total Stock -->
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="erp-card d-flex align-items-center justify-content-between">
+            <div>
+              <span class="text-muted d-block small fw-semibold text-uppercase">Total Stock</span>
+              <h2 class="mb-0 fw-bold mt-1"><%= totalStock %></h2>
+            </div>
+            <div class="stat-icon bg-success bg-opacity-10 text-success">
+              <i class="bi bi-box-seam-fill"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Total Sales -->
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="erp-card d-flex align-items-center justify-content-between">
+            <div>
+              <span class="text-muted d-block small fw-semibold text-uppercase">Total Sold Items</span>
+              <h2 class="mb-0 fw-bold mt-1"><%= totalSales %></h2>
+            </div>
+            <div class="stat-icon bg-danger bg-opacity-10 text-danger">
+              <i class="bi bi-cart-check-fill"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Pending Transfers -->
+        <div class="col-xl-3 col-md-6 mb-4">
+          <a href="/transfers" class="text-decoration-none text-reset">
+            <div class="erp-card d-flex align-items-center justify-content-between">
+              <div>
+                <span class="text-muted d-block small fw-semibold text-uppercase">Pending Transfers</span>
+                <h2 class="mb-0 fw-bold mt-1">
+                  <span id="badge-pending-transfers" class="<%= pendingTransfers > 0 ? '' : 'd-none' %> badge bg-warning text-dark me-2 small py-1 px-2 rounded-circle" style="font-size: 0.95rem;">
+                    <%= pendingTransfers %>
+                  </span>
+                  <span><%= pendingTransfers %></span>
+                </h2>
+              </div>
+              <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                <i class="bi bi-arrow-left-right"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Monthly Sales Chart -->
+        <div class="col-xl-8 col-lg-7 mb-4">
+          <div class="erp-card h-100">
+            <h5 class="fw-bold mb-4"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Revenue Trend (Last 6 Months)</h5>
+            <div class="chart-container">
+              <canvas id="salesChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Branch Performance -->
+        <div class="col-xl-4 col-lg-5 mb-4">
+          <div class="erp-card h-100">
+            <h5 class="fw-bold mb-4"><i class="bi bi-bar-chart-line-fill me-2 text-success"></i>Branch Performance</h5>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th>Branch</th>
+                    <th class="text-end">Sold Qty</th>
+                    <th class="text-end">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% if (branchPerformance && branchPerformance.length > 0) { %>
+                    <% branchPerformance.forEach(b => { %>
+                      <tr>
+                        <td>
+                          <div class="fw-semibold"><%= b.branch.branch_name %></div>
+                          <small class="text-muted"><%= b.branch.city %></small>
+                        </td>
+                        <td class="text-end fw-semibold"><%= b.totalSold %></td>
+                        <td class="text-end text-success fw-semibold">₹<%= b.revenue.toLocaleString('en-IN') %></td>
+                      </tr>
+                    <% }) %>
+                  <% } else { %>
+                    <tr>
+                      <td colspan="3" class="text-center py-4 text-muted">No sales logged yet.</td>
+                    </tr>
+                  <% } %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Stock Transfer Requests Log -->
+        <div class="col-12 mb-4">
+          <div class="erp-card">
+            <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+              <h5 class="fw-bold mb-0"><i class="bi bi-arrow-left-right me-2 text-info"></i>Recent Stock Transfer Requests</h5>
+              <a href="/transfers" class="btn btn-outline-primary btn-sm px-3"><i class="bi bi-eye-fill me-1"></i>Transfers Center</a>
+            </div>
+            <div class="table-responsive">
+              <table class="table align-middle">
+                <thead>
+                  <tr>
+                    <th>Requested Date</th>
+                    <th>Product Details</th>
+                    <th class="text-end">Qty</th>
+                    <th>From (Source)</th>
+                    <th>To (Destination)</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% if (recentTransfers && recentTransfers.length > 0) { %>
+                    <% recentTransfers.forEach(t => { %>
+                      <% if (t.product_id) { %>
+                        <tr>
+                          <td class="small text-muted"><%= new Date(t.createdAt).toLocaleDateString('en-IN') %></td>
+                          <td>
+                            <div class="fw-bold"><%= t.product_id.item_name %></div>
+                            <small class="text-muted">Design: <%= t.product_id.design_no %> | Size: <%= t.product_id.size %></small>
+                          </td>
+                          <td class="text-end fw-bold text-primary"><%= t.quantity %></td>
+                          <td><span class="small fw-semibold text-secondary"><%= t.from_branch.branch_name %></span></td>
+                          <td><span class="small fw-semibold text-secondary"><%= t.to_branch.branch_name %></span></td>
+                          <td>
+                            <% 
+                              let badgeClass = 'bg-secondary';
+                              if (t.status === 'Pending') badgeClass = 'bg-warning text-dark';
+                              if (t.status === 'Approved') badgeClass = 'bg-info text-dark';
+                              if (t.status === 'Picked') badgeClass = 'bg-secondary text-white';
+                              if (t.status === 'In Transit') badgeClass = 'bg-primary';
+                              if (t.status === 'Delivered') badgeClass = 'bg-success';
+                              if (t.status === 'Rejected') badgeClass = 'bg-danger';
+                            %>
+                            <span class="badge <%= badgeClass %>"><%= t.status %></span>
+                          </td>
+                        </tr>
+                      <% } %>
+                    <% }) %>
+                  <% } else { %>
+                    <tr>
+                      <td colspan="6" class="text-center py-4 text-muted">No stock transfer requests logged yet.</td>
+                    </tr>
+                  <% } %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <% } else { %>
+      <!-- Branch Manager / Staff Dashboard -->
+      <div class="row">
+        <!-- Card 1: Branch Stock -->
+        <div class="col-xl-4 col-md-6 mb-4">
+          <div class="erp-card d-flex align-items-center justify-content-between">
+            <div>
+              <span class="text-muted d-block small fw-semibold text-uppercase">Branch Stock Quantity</span>
+              <h2 class="mb-0 fw-bold mt-1"><%= branchStock %></h2>
+            </div>
+            <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+              <i class="bi bi-box-seam-fill"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Today's Sales -->
+        <div class="col-xl-4 col-md-6 mb-4">
+          <div class="erp-card d-flex align-items-center justify-content-between">
+            <div>
+              <span class="text-muted d-block small fw-semibold text-uppercase">Today's Sold Pieces</span>
+              <h2 class="mb-0 fw-bold mt-1"><%= todaySales %></h2>
+            </div>
+            <div class="stat-icon bg-success bg-opacity-10 text-success">
+              <i class="bi bi-cart-check-fill"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Pending Transfers -->
+        <div class="col-xl-4 col-md-12 mb-4">
+          <a href="/transfers" class="text-decoration-none text-reset">
+            <div class="erp-card d-flex align-items-center justify-content-between">
+              <div>
+                <span class="text-muted d-block small fw-semibold text-uppercase">Active Stock Transfers</span>
+                <h2 class="mb-0 fw-bold mt-1"><%= transferRequests %></h2>
+              </div>
+              <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                <i class="bi bi-arrow-left-right"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-12 mb-4">
+          <div class="erp-card">
+            <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+              <h5 class="fw-bold mb-0"><i class="bi bi-box-seam me-2 text-primary"></i>Branch Stock Report - <span class="text-muted small"><%= branchName %></span></h5>
+              <div class="d-flex align-items-center gap-2">
+                <button id="btn-show-all" class="btn btn-outline-secondary btn-sm">Show All Stock</button>
+                <button id="btn-show-empty" class="btn btn-outline-secondary btn-sm">Show Empty Stock</button>
+                <a href="/stocks" class="btn btn-outline-primary btn-sm px-3"><i class="bi bi-eye-fill me-1"></i>View Stocks</a>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table id="branch-stock-report-table" class="table table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Design / Size</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end">Value (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% if (branchStockReport && branchStockReport.length > 0) { %>
+                    <% branchStockReport.forEach(s => { %>
+                      <tr data-qty="<%= s.quantity %>">
+                        <td>
+                          <div class="fw-semibold"><%= s.item_name %></div>
+                        </td>
+                        <td class="small text-muted"><%= s.design_no %> | <%= s.size %></td>
+                        <td class="text-end fw-bold"><%= s.quantity %></td>
+                        <td class="text-end text-success fw-semibold">₹<%= (s.value || 0).toLocaleString('en-IN') %></td>
+                      </tr>
+                    <% }) %>
+                  <% } else { %>
+                    <tr>
+                      <td colspan="4" class="text-center py-4 text-muted">No stock data available for this branch.</td>
+                    </tr>
+                  <% } %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <% } %>
+
+    <script>
+      // Branch stock report filtering (no page refresh)
+      (function() {
+        document.addEventListener('DOMContentLoaded', function() {
+          const btnAll = document.getElementById('btn-show-all');
+          const btnEmpty = document.getElementById('btn-show-empty');
+          const table = document.getElementById('branch-stock-report-table');
+          if (!table || !btnAll || !btnEmpty) return;
+
+          const rows = Array.from(table.querySelectorAll('tbody tr[data-qty]'));
+
+          function setActive(button) {
+            [btnAll, btnEmpty].forEach(b => b.classList.remove('active'));
+            button.classList.add('active');
+          }
+
+          function showAll() {
+            rows.forEach(r => r.style.display = '');
+            setActive(btnAll);
+          }
+
+          function showEmpty() {
+            rows.forEach(r => {
+              const q = parseInt(r.getAttribute('data-qty') || '0', 10);
+              r.style.display = q === 0 ? '' : 'none';
+            });
+            setActive(btnEmpty);
+          }
+
+          btnAll.addEventListener('click', function(e) { e.preventDefault(); showAll(); });
+          btnEmpty.addEventListener('click', function(e) { e.preventDefault(); showEmpty(); });
+
+          // default: Show All
+          showAll();
+        });
+      })();
+    </script>
+
+  </div>
+</div>
+
+<!-- Footer Scripts for Chart -->
+<% if (role === 'Super Admin') { %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const ctx = document.getElementById('salesChart').getContext('2d');
+      const labels = <%- JSON.stringify(chartLabels) %>;
+      const data = <%- JSON.stringify(chartRevenue) %>;
+
+      // Check if light or dark theme is loaded
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const textColor = isDark ? '#94a3b8' : '#64748b';
+      const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+
+      const salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Monthly Revenue (₹)',
+            data: data,
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            borderWidth: 3,
+            tension: 0.3,
+            fill: true,
+            pointBackgroundColor: '#6366f1',
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: gridColor
+              },
+              ticks: {
+                color: textColor,
+                font: {
+                  family: 'Outfit'
+                }
+              }
+            },
+            y: {
+              grid: {
+                color: gridColor
+              },
+              ticks: {
+                color: textColor,
+                font: {
+                  family: 'Outfit'
+                },
+                callback: function(value) {
+                  return '₹' + value.toLocaleString('en-IN');
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Update chart styling when theme toggles
+      const themeToggle = document.getElementById('theme-toggle');
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          setTimeout(() => {
+            const isDarkUpdated = document.documentElement.getAttribute('data-theme') === 'dark';
+            const updatedColor = isDarkUpdated ? '#94a3b8' : '#64748b';
+            const updatedGrid = isDarkUpdated ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+            
+            salesChart.options.scales.x.grid.color = updatedGrid;
+            salesChart.options.scales.x.ticks.color = updatedColor;
+            salesChart.options.scales.y.grid.color = updatedGrid;
+            salesChart.options.scales.y.ticks.color = updatedColor;
+            salesChart.update();
+          }, 350); // wait for localstorage write / attribute change transitions
+        });
+      }
+    });
+  </script>
+<% } %>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,69 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-4 fade-in-up">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+      <h4 class="fw-bold mb-0"><i class="bi bi-calendar-day me-2 text-success"></i>Daily Sales Summary Report</h4>
+      <a href="/reports" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Hub</a>
+    </div>
+
+    <!-- Filter (Super Admin only) -->
+    <% if (role === 'Super Admin') { %>
+      <div class="erp-card mb-4">
+        <form action="/reports/daily-sales" method="GET" class="row g-3 align-items-end">
+          <div class="col-md-8">
+            <label for="branchId" class="form-label fw-semibold small text-muted text-uppercase">Filter by Branch</label>
+            <select class="form-select" id="branchId" name="branchId">
+              <option value="">All Branches</option>
+              <% branches.forEach(b => { %>
+                <option value="<%= b._id %>" <%= selectedBranch === b._id.toString() ? 'selected' : '' %>><%= b.branch_name %> (<%= b.city %>)</option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <button type="submit" class="btn btn-primary w-100 py-2"><i class="bi bi-funnel-fill me-1"></i>Generate Report</button>
+          </div>
+        </form>
+      </div>
+    <% } %>
+
+    <!-- Report Table -->
+    <div class="erp-card">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle datatable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th class="text-end">Units Sold</th>
+              <th class="text-end">Total Revenue (Rate)</th>
+              <th class="text-end">Total MRP Value</th>
+              <th class="text-end">Average Price/Unit</th>
+              <th class="text-end">Transactions Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% data.forEach(row => { %>
+              <% const dateStr = `${row._id.day}/${row._id.month}/${row._id.year}`; %>
+              <tr>
+                <td class="fw-bold text-primary"><%= dateStr %></td>
+                <td class="text-end fw-bold"><%= row.totalSalesQty %></td>
+                <td class="text-end text-success fw-semibold">₹<%= row.totalRevenue.toLocaleString('en-IN') %></td>
+                <td class="text-end text-muted small">₹<%= row.totalMrpRevenue.toLocaleString('en-IN') %></td>
+                <td class="text-end">
+                  ₹<%= row.totalSalesQty > 0 ? (row.totalRevenue / row.totalSalesQty).toFixed(2) : '0.00' %>
+                </td>
+                <td class="text-end font-monospace"><%= row.transactionsCount %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

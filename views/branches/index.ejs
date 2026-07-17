@@ -1,0 +1,97 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-3 p-md-4 fade-in-up">
+    <div class="row">
+      <div class="col-12">
+        <h4 class="fw-bold mb-4"><i class="bi bi-buildings-fill me-2 text-primary"></i>Manage Branches</h4>
+      </div>
+    </div>
+
+    <% if (error) { %>
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i><%= error %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+
+    <% if (success) { %>
+      <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i><%= success %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+
+    <div class="row">
+      <!-- Create Branch Form -->
+      <div class="col-lg-4 mb-4">
+        <div class="erp-card">
+          <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle-fill me-2 text-primary"></i>Add Branch</h5>
+          <form action="/branches" method="POST">
+            <div class="mb-3">
+              <label for="branch_name" class="form-label fw-semibold">Branch Name</label>
+              <input type="text" class="form-control" id="branch_name" name="branch_name" placeholder="e.g. Rajkot Branch" required>
+            </div>
+            <div class="mb-3">
+              <label for="branch_type" class="form-label fw-semibold">Branch Type</label>
+              <select class="form-select" id="branch_type" name="branch_type" required>
+                <option value="Retail" selected>Retail (Regular Outlet)</option>
+                <option value="H/O">H/O (Head Office)</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="city" class="form-label fw-semibold">City</label>
+              <input type="text" class="form-control" id="city" name="city" placeholder="e.g. Rajkot" required>
+            </div>
+            <div class="mb-3">
+              <label for="address" class="form-label fw-semibold">Address</label>
+              <textarea class="form-control" id="address" name="address" rows="3" placeholder="Full branch address..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2"><i class="bi bi-save me-2"></i>Save Branch</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Branches List -->
+      <div class="col-lg-8 mb-4">
+        <div class="erp-card">
+          <h5 class="fw-bold mb-3"><i class="bi bi-list-task me-2 text-success"></i>Active Branches</h5>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Branch Name</th>
+                  <th>Type</th>
+                  <th>City</th>
+                  <th>Address</th>
+                  <th>Created At</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% branches.forEach(b => { %>
+                  <tr>
+                    <td class="fw-bold text-primary"><%= b.branch_name %></td>
+                    <td>
+                      <span class="badge <%= b.branch_type === 'H/O' ? 'bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25' : 'bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25' %> px-2.5 py-1.5">
+                        <%= b.branch_type || 'Retail' %>
+                      </span>
+                    </td>
+                    <td><%= b.city %></td>
+                    <td class="text-wrap small text-muted"><%= b.address %></td>
+                    <td class="small text-muted"><%= new Date(b.createdAt).toLocaleDateString('en-IN') %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

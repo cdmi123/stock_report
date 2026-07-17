@@ -1,0 +1,135 @@
+<!-- Top Navbar -->
+<div class="top-navbar shadow-sm">
+  <!-- Left Section: Sidebar Toggle & Title -->
+  <div class="d-flex align-items-center gap-2 gap-md-3">
+    <button type="button" id="sidebarCollapse" class="btn btn-ghost border-0 p-2 d-lg-none" title="Toggle Sidebar" aria-label="Toggle navigation menu">
+      <i class="bi bi-list fs-5"></i>
+    </button>
+    <h5 class="mb-0 text-truncate fw-semibold d-none d-sm-block flex-grow-1" style="font-size: 16px; min-width: 0;">
+      <% if (currentUser.role === 'Super Admin') { %>
+        Dashboard
+      <% } else { %>
+        <%= currentUser.branch_id ? currentUser.branch_id.branch_name : 'Branch' %>
+      <% } %>
+    </h5>
+  </div>
+
+  <!-- Center Section: Stream Active, Time & Instant Restock -->
+  <div class="d-flex align-items-center gap-2 flex-wrap justify-content-center navbar-center-group">
+    <div class="navbar-stream-toggle d-flex align-items-center gap-2 px-2 px-md-3 py-1.5 rounded" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color); min-height: 36px;">
+      <div class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" role="switch" id="streamActive" checked style="margin-top: 2px;">
+        <label class="form-check-label fw-semibold text-muted ms-2" for="streamActive" style="user-select: none; font-size: 12px; cursor: pointer;">
+          <span class="stream-status-badge" style="display: inline-block; width: 6px; height: 6px; background-color: #10b981; border-radius: 50%; margin-right: 5px; vertical-align: middle;"></span>Stream
+        </label>
+      </div>
+    </div>
+    
+    <div class="d-none d-xl-flex align-items-center px-2 px-md-3 py-1.5 rounded text-muted" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color); font-family: 'Courier New', monospace; font-size: 12px; min-height: 36px;">
+      <i class="bi bi-clock-history" style="font-size: 14px; margin-right: 6px;"></i><span id="liveTime">--:--:-- AM</span>
+    </div>
+    
+    <a href="/transfer-requests" class="btn btn-primary btn-sm px-2 px-md-3 fw-semibold d-flex align-items-center gap-1 gap-md-2" style="height: 36px; border-radius: 6px; font-size: 13px;">
+      <i class="bi bi-shuffle" style="font-size: 14px;"></i>
+      <span class="d-none d-lg-inline">Restock</span>
+    </a>
+  </div>
+
+  <!-- Right Section: Icons & User Menu -->
+  <div class="d-flex align-items-center gap-1 gap-md-2">
+    <button class="btn btn-ghost nav-link p-2" id="theme-toggle" title="Toggle Theme" style="min-width: 36px; min-height: 36px;">
+      <i class="bi bi-moon-stars-fill" style="font-size: 16px;"></i>
+    </button>
+
+    <div class="dropdown">
+      <button class="btn btn-ghost nav-link position-relative p-2" type="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications" style="min-width: 36px; min-height: 36px;">
+        <i class="bi bi-bell-fill" style="font-size: 16px;"></i>
+        <span id="notification-badge" class="position-absolute top-0 start-100 translate-middle badge bg-danger border border-light rounded-circle d-none" style="width: 8px; height: 8px; padding: 0 !important;">
+          <span class="visually-hidden">New alerts</span>
+        </span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-0" aria-labelledby="notificationDropdown" style="width: 320px; overflow: hidden; border-radius: 10px;">
+        <li class="bg-primary text-white p-3 d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-bell-fill me-2"></i>Notifications</h6>
+          <span id="notif-count-badge" class="badge bg-white text-primary rounded-pill small d-none" style="font-size: 11px;">0</span>
+        </li>
+        <div id="notification-list" style="max-height: 280px; overflow-y: auto;">
+          <div id="no-notifications" class="text-center py-4 text-muted">
+            <i class="bi bi-chat-left-dots fs-4 d-block mb-2 opacity-50"></i>
+            <span class="small">No new notifications</span>
+          </div>
+        </div>
+        <li class="border-top text-center py-2 bg-light dark-bg-adjust">
+          <a href="/transfer-requests" class="text-decoration-none small fw-semibold text-secondary">View All</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="dropdown">
+      <button class="btn btn-link text-decoration-none dropdown-toggle d-flex align-items-center gap-2 p-1 border-0" type="button" id="profileDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="min-height: 36px;">
+        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 0.9rem;">
+          <%= currentUser.name.charAt(0).toUpperCase() %>
+        </div>
+        <span class="text-main fw-semibold d-none d-md-block" style="font-size: 13px;"><%= currentUser.name %></span>
+        <i class="bi bi-chevron-down d-none d-md-block" style="font-size: 12px;"></i>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="profileDropdown" style="border-radius: 8px;">
+        <li class="px-3 py-2 border-bottom">
+          <div class="fw-bold text-truncate" style="font-size: 13px;"><%= currentUser.name %></div>
+          <small class="text-muted text-truncate d-block" style="font-size: 12px;"><%= currentUser.email %></small>
+          <% if (currentUser.branch_id) { %>
+            <small class="text-primary text-truncate d-block" style="font-size: 11px; margin-top: 2px;"><%= currentUser.branch_id.branch_name %></small>
+          <% } %>
+        </li>
+        <li><a class="dropdown-item py-2" href="/" style="font-size: 13px;"><i class="bi bi-grid-fill me-2 text-muted"></i>Dashboard</a></li>
+        <li><hr class="dropdown-divider my-1"></li>
+        <li><a class="dropdown-item py-2 text-danger" href="/auth/logout" style="font-size: 13px;"><i class="bi bi-box-arrow-right me-2"></i>Sign Out</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.erpNotificationConfig = {
+    userId: '<%= currentUser._id %>',
+    branchId: '<%= currentUser.branch_id ? currentUser.branch_id._id : '' %>',
+    vapidPublicKey: '<%= typeof vapidPublicKey !== 'undefined' ? vapidPublicKey : '' %>',
+    transferRequestsUrl: '/transfer-requests'
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const liveTimeEl = document.getElementById('liveTime');
+    if (liveTimeEl) {
+      const updateClock = () => {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+        liveTimeEl.innerText = timeString;
+      };
+      updateClock();
+      setInterval(updateClock, 1000);
+    }
+    
+    const streamActiveToggle = document.getElementById('streamActive');
+    const streamBadge = document.querySelector('.stream-status-badge');
+    if (streamActiveToggle && streamBadge) {
+      const updateStreamStatus = () => {
+        if (streamActiveToggle.checked) {
+          streamBadge.style.backgroundColor = '#10b981';
+          streamBadge.title = 'Stream is active';
+        } else {
+          streamBadge.style.backgroundColor = '#ef4444';
+          streamBadge.title = 'Stream is inactive';
+        }
+      };
+      updateStreamStatus();
+      streamActiveToggle.addEventListener('change', updateStreamStatus);
+    }
+  });
+</script>
+
+

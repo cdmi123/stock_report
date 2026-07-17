@@ -1,0 +1,78 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-4 fade-in-up">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+      <h4 class="fw-bold mb-0"><i class="bi bi-box-seam me-2 text-primary"></i>Branch Stock Report</h4>
+      <a href="/reports" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Hub</a>
+    </div>
+
+    <!-- Filter (Super Admin only) -->
+    <% if (role === 'Super Admin') { %>
+      <div class="erp-card mb-4">
+        <form action="/reports/branch-stock" method="GET" class="row g-3 align-items-end">
+          <div class="col-md-8">
+            <label for="branchId" class="form-label fw-semibold small text-muted text-uppercase">Select Branch</label>
+            <select class="form-select" id="branchId" name="branchId">
+              <option value="">All Branches</option>
+              <% branches.forEach(b => { %>
+                <option value="<%= b._id %>" <%= selectedBranch === b._id.toString() ? 'selected' : '' %>><%= b.branch_name %> (<%= b.city %>)</option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <button type="submit" class="btn btn-primary w-100 py-2"><i class="bi bi-funnel-fill me-1"></i>Generate Report</button>
+          </div>
+        </form>
+      </div>
+    <% } %>
+
+    <!-- Stock Table -->
+    <div class="erp-card">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle datatable">
+          <thead>
+            <tr>
+              <th>Barcode</th>
+              <th>Item Name</th>
+              <th>Design No</th>
+              <th>Size</th>
+              <th>Colour</th>
+              <th>Box No</th>
+              <th>Branch</th>
+              <th class="text-end">Available Qty</th>
+              <th class="text-end">Rate</th>
+              <th class="text-end">MRP</th>
+              <th class="text-end">Stock Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% data.forEach(item => { %>
+              <tr>
+                <td class="font-monospace small"><%= item.product_id.barcode || '-' %></td>
+                <td class="fw-bold"><%= item.product_id.item_name %></td>
+                <td><span class="badge bg-secondary bg-opacity-25 text-dark font-monospace"><%= item.product_id.design_no %></span></td>
+                <td><%= item.product_id.size %></td>
+                <td><%= item.product_id.colour || '-' %></td>
+                <td class="small text-muted font-monospace"><%= item.product_id.box_no || '-' %></td>
+                <td><span class="small fw-semibold text-secondary"><%= item.branch_id.branch_name %></span></td>
+                <td class="text-end fw-bold"><%= item.quantity %></td>
+                <td class="text-end">₹<%= item.product_id.rate.toFixed(2) %></td>
+                <td class="text-end text-muted small">₹<%= item.product_id.mrp.toFixed(2) %></td>
+                <td class="text-end fw-semibold text-success">
+                  ₹<%= (item.quantity * item.product_id.rate).toLocaleString('en-IN') %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

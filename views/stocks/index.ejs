@@ -1,0 +1,211 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <!-- Allocation Matrix Content -->
+  <div class="container-fluid p-3 p-md-4 fade-in-up">
+
+    <!-- Metrics Widgets Row -->
+    <div class="row mb-4">
+      <!-- Widget 1: Consolidated SKUs -->
+      <div class="col-xl-3 col-md-6 mb-3">
+        <div class="erp-card py-3 px-4 h-100 d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted d-block small fw-bold text-uppercase" style="letter-spacing: 0.05rem;">Consolidated SKUs</span>
+            <h2 class="mb-0 fw-bold mt-1"><%= consolidatedSKUs %></h2>
+          </div>
+          <div class="stat-icon bg-secondary bg-opacity-10 text-secondary" style="font-size: 1.2rem;">
+            <i class="bi bi-hash"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Widget 2: Global On-Hand Inventory -->
+      <div class="col-xl-3 col-md-6 mb-3">
+        <div class="erp-card py-3 px-4 h-100 d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted d-block small fw-bold text-uppercase" style="letter-spacing: 0.05rem;">Global On-Hand Inventory</span>
+            <h2 class="mb-0 fw-bold mt-1 text-primary"><%= globalOnHand.toLocaleString('en-IN') %></h2>
+          </div>
+          <div class="stat-icon bg-primary bg-opacity-10 text-primary" style="font-size: 1.2rem;">
+            <i class="bi bi-box-seam-fill"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Widget 3: Depleted Locations -->
+      <div class="col-xl-3 col-md-6 mb-3">
+        <div class="erp-card py-3 px-4 h-100 d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted d-block small fw-bold text-uppercase" style="letter-spacing: 0.05rem;">Depleted Locations</span>
+            <h2 class="mb-0 fw-bold mt-1 <%= depletedLocations > 0 ? 'text-danger' : '' %>"><%= depletedLocations %></h2>
+          </div>
+          <div class="stat-icon bg-danger bg-opacity-10 text-danger" style="font-size: 1.2rem;">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Widget 4: Session Operations -->
+      <div class="col-xl-3 col-md-6 mb-3">
+        <div class="erp-card py-3 px-4 h-100 d-flex align-items-center justify-content-between">
+          <div>
+            <span class="text-muted d-block small fw-bold text-uppercase" style="letter-spacing: 0.05rem;">Session Operations</span>
+            <h2 class="mb-0 fw-bold mt-1"><%= sessionOperations %></h2>
+          </div>
+          <div class="stat-icon bg-info bg-opacity-10 text-info" style="font-size: 1.2rem;">
+            <i class="bi bi-cpu"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Allocation Card Containing Controls & Table -->
+    <div class="allocation-card">
+      
+      <!-- Controls Row (Search & Filters) -->
+      <div class="controls-row">
+        <form action="/stocks" method="GET" class="w-100 d-flex align-items-center justify-content-between flex-wrap gap-3 mb-0">
+          <div class="search-wrapper">
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+              <input type="text" class="form-control border-start-0 py-2" id="q" name="q" placeholder="Search product name, variant SKU, or scan barcode..." value="<%= searchQuery %>">
+            </div>
+          </div>
+
+          <div class="filters-wrapper">
+            <span class="badge-showing">Showing <%= matrixRows.length %> of <%= consolidatedSKUs %></span>
+            
+            <select class="filter-select">
+              <option>All Categories</option>
+            </select>
+            
+            <select class="filter-select">
+              <option>All Stock Levels</option>
+            </select>
+
+            <button type="submit" class="d-none">Filter</button> <!-- Hidden submit trigger for input return -->
+            
+            <a href="/stocks" class="reset-link ms-2">Reset</a>
+          </div>
+        </form>
+      </div>
+
+      <!-- Table Container -->
+      <div class="table-responsive">
+        <table class="allocation-table">
+          <thead>
+            <tr>
+              <th style="min-width: 250px;">Variant Listing</th>
+              
+              <!-- Dynamic Outlet Header Columns -->
+              <% branches.forEach(b => { %>
+                <th class="text-center"><%= b.branch_name %></th>
+              <% }) %>
+
+              <th class="text-center">Global Qty</th>
+              <th style="min-width: 180px;">Allocation Spread</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% 
+              const colorClasses = ['bg-primary', 'bg-success', 'bg-warning', 'bg-info', 'bg-danger', 'bg-secondary'];
+              matrixRows.forEach(row => { 
+                const product = row.product;
+            %>
+              <tr>
+                <!-- Variant Listing details -->
+                <td>
+                  <div class="fw-bold text-main" style="font-size: 0.95rem;"><%= product.item_name %></div>
+                  <small class="text-muted d-block mt-0.5" style="font-size: 0.8rem;">
+                    <%= product.barcode ? product.barcode : 'NO-BARCODE' %> • Design: <%= product.design_no %> • Size: <%= product.size %>
+                  </small>
+                </td>
+
+                <!-- Branch quantities boxes -->
+                <% branches.forEach(b => { %>
+                  <% const qty = row.branchQuantities[b._id.toString()] || 0; %>
+                  <td class="text-center">
+                    <% if (qty <= 0) { %>
+                      <span class="qty-box qty-box-out">
+                        0 <span style="font-size: 0.65rem;" class="fw-bold">OUT</span>
+                      </span>
+                      <% if (b.branch_type === 'H/O' && row.otherBranchStock && row.otherBranchStock.length > 0) { %>
+                        <div class="mt-2 text-start mx-auto" style="font-size: 0.72rem; line-height: 1.3; max-width: 130px; border-top: 1px dashed var(--border-color); padding-top: 6px;">
+                          <span class="text-success fw-bold d-block mb-0.5" style="font-size: 0.68rem;"><i class="bi bi-info-circle-fill"></i> Source Stock:</span>
+                          <% row.otherBranchStock.forEach(obs => { %>
+                            <span class="d-block text-secondary font-monospace"><%= obs.branch_name.replace(' Branch', '') %>: <strong><%= obs.quantity %></strong></span>
+                          <% }) %>
+                        </div>
+                      <% } %>
+                    <% } else if (qty < 10) { %>
+                      <span class="qty-box qty-box-low">
+                        <%= qty %> <span style="font-size: 0.65rem;" class="fw-bold">LOW</span>
+                      </span>
+                    <% } else { %>
+                      <span class="qty-box"><%= qty %></span>
+                    <% } %>
+                  </td>
+                <% }) %>
+
+                <!-- Global Quantity -->
+                <td class="text-center fw-bold fs-6 font-monospace text-main">
+                  <%= row.totalQuantity %>
+                </td>
+
+                <!-- Allocation Spread Segmented Bars -->
+                <td>
+                  <% if (row.totalQuantity > 0) { %>
+                    <div class="progress rounded-pill overflow-hidden shadow-sm mb-1" style="height: 10px;">
+                      <% 
+                        let labelParts = [];
+                        branches.forEach((b, idx) => {
+                          const qty = row.branchQuantities[b._id.toString()] || 0;
+                          if (qty <= 0) return;
+                          
+                          const pct = Math.round((qty / row.totalQuantity) * 100);
+                          const colorClass = colorClasses[idx % colorClasses.length];
+                          
+                          // Get first letter of branch name as abbreviation (e.g. Surat -> S)
+                          const shortName = b.branch_name.replace(' Branch', '').split(' ')[0].charAt(0).toUpperCase();
+                          labelParts.push(`${shortName}:${pct}%`);
+                      %>
+                        <div class="progress-bar <%= colorClass %>" role="progressbar" style="width: <%= pct %>%" title="<%= b.branch_name %>: <%= pct %>% (<%= qty %> pcs)"></div>
+                      <% }) %>
+                    </div>
+                    <small class="text-muted font-monospace d-block" style="font-size: 0.65rem; letter-spacing: -0.01rem;">
+                      <%= labelParts.join(' ') %>
+                    </small>
+                  <% } else { %>
+                    <div class="progress rounded-pill" style="height: 10px; background-color: var(--border-color);">
+                      <div class="progress-bar bg-secondary" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted font-monospace d-block" style="font-size: 0.65rem;">Empty stock</small>
+                  <% } %>
+                </td>
+
+                <!-- Action Button Outlines -->
+                <td class="text-end">
+                  <div class="d-flex align-items-center justify-content-end gap-1.5">
+                    <a href="/transfers" class="action-btn text-decoration-none" title="Request transfer">
+                      <i class="bi bi-shuffle"></i>
+                    </a>
+                    <button class="action-btn border" onclick="alert('Stock records can be modified by uploading a new Stock spreadsheet.')" title="Adjust stock">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

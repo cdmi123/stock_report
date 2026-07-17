@@ -1,0 +1,71 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-4 fade-in-up">
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+      <h4 class="fw-bold mb-0"><i class="bi bi-intersect me-2 text-danger"></i>Consolidated Stock Pivot Report</h4>
+      <a href="/reports" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back to Hub</a>
+    </div>
+
+    <!-- Pivot Table Card -->
+    <div class="erp-card">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle datatable table-bordered">
+          <thead class="table-dark text-nowrap">
+            <tr>
+              <th>Barcode</th>
+              <th>Item Name</th>
+              <th>Design No</th>
+              <th>Size</th>
+              <th>Colour</th>
+              
+              <!-- Dynamic Branch Columns -->
+              <% data.branches.forEach(b => { %>
+                <th class="text-end bg-primary bg-opacity-10 text-primary"><%= b.branch_name %></th>
+              <% }) %>
+
+              <th class="text-end bg-success bg-opacity-10 text-success">Total Qty</th>
+              <th class="text-end">Rate</th>
+              <th class="text-end">MRP</th>
+              <th class="text-end bg-success bg-opacity-10 text-success">Total Asset Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% data.rows.forEach(row => { %>
+              <tr>
+                <td class="font-monospace small"><%= row.product.barcode || '-' %></td>
+                <td class="fw-bold"><%= row.product.item_name %></td>
+                <td><span class="badge bg-secondary bg-opacity-25 text-dark font-monospace"><%= row.product.design_no %></span></td>
+                <td class="fw-bold"><%= row.product.size %></td>
+                <td><%= row.product.colour || '-' %></td>
+
+                <!-- Branch quantities -->
+                <% data.branches.forEach(b => { %>
+                  <% let qty = row.branchQuantities[b._id.toString()] || 0; %>
+                  <!-- Color code negative stock levels in columns -->
+                  <td class="text-end fw-semibold <%= qty < 0 ? 'text-danger table-danger' : (qty === 0 ? 'text-muted' : '') %>">
+                    <%= qty %>
+                  </td>
+                <% }) %>
+
+                <!-- Global Totals -->
+                <td class="text-end fw-bold bg-success bg-opacity-5"><%= row.totalQuantity %></td>
+                <td class="text-end">₹<%= row.product.rate.toFixed(2) %></td>
+                <td class="text-end text-muted small">₹<%= row.product.mrp.toFixed(2) %></td>
+                <td class="text-end fw-semibold text-success bg-success bg-opacity-5">
+                  ₹<%= (row.totalQuantity * row.product.rate).toLocaleString('en-IN') %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

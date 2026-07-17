@@ -1,0 +1,143 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-4 fade-in-up">
+    <div class="row">
+      <div class="col-12 col-lg-8 mx-auto">
+        <h4 class="fw-bold mb-4"><i class="bi bi-file-earmark-arrow-up-fill me-2 text-primary"></i>Upload Stock Inventory File</h4>
+
+        <% if (error) { %>
+          <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert" style="border-radius: 12px;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Upload Failed: </strong> <%= error %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        <% } %>
+
+        <% if (success) { %>
+          <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert" style="border-radius: 12px;">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Success: </strong> <%= success %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        <% } %>
+
+        <div class="erp-card mb-4">
+          <h5 class="fw-bold mb-3">Stock Excel File Import</h5>
+          <form action="/stocks/upload" method="POST" enctype="multipart/form-data">
+            
+            <% if (role === 'Super Admin') { %>
+              <div class="mb-4">
+                <label for="branch_id" class="form-label fw-bold">Select Branch for Upload</label>
+                <select class="form-select" id="branch_id" name="branch_id" required>
+                  <option value="" disabled selected>Choose branch...</option>
+                  <% branches.forEach(b => { %>
+                    <option value="<%= b._id %>"><%= b.branch_name %> (<%= b.city %>)</option>
+                  <% }) %>
+                </select>
+                <div class="form-text text-muted">As Super Admin, you can upload stock files for any branch.</div>
+              </div>
+            <% } else { %>
+              <input type="hidden" name="branch_id" value="<%= userBranchId %>">
+            <% } %>
+
+            <div class="mb-4">
+              <label for="stock_file" class="form-label fw-bold">Select Excel File (.xlsx or .xls)</label>
+              <input class="form-control" type="file" id="stock_file" name="stock_file" accept=".xlsx, .xls" required>
+              <div class="form-text text-muted">Maximum file size: 5MB. Must match the column specifications.</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2.5 fw-semibold"><i class="bi bi-cloud-arrow-up-fill me-2"></i>Start Stock Import</button>
+          </form>
+        </div>
+
+        <!-- Excel Specification Instructions -->
+        <div class="card border-0 bg-light shadow-sm" style="border-radius: 16px;">
+          <div class="card-body p-4">
+            <h6 class="fw-bold mb-3 text-secondary text-uppercase"><i class="bi bi-info-circle-fill me-2"></i>Excel File Formatting Specification</h6>
+            <p class="small text-muted">Please ensure your Excel sheet contains the following exact column headers (names are case-insensitive and flexible, but structure must match):</p>
+            
+            <div class="table-responsive">
+              <table class="table table-bordered table-sm small mb-0 align-middle">
+                <thead class="table-dark">
+                  <tr>
+                    <th>Column Name</th>
+                    <th>Type</th>
+                    <th>Required</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="font-monospace">Barcode</td>
+                    <td>Text</td>
+                    <td class="text-warning">Optional</td>
+                    <td>EAN/UPC product scanning code.</td>
+                  </tr>
+                  <tr>
+                    <td class="font-monospace fw-bold">Item Name</td>
+                    <td>Text</td>
+                    <td class="text-danger">Required</td>
+                    <td>Category / description of the item (e.g. SHIRT, BAGI).</td>
+                  </tr>
+                  <tr>
+                    <td class="font-monospace fw-bold">Design Number</td>
+                    <td>Text/Num</td>
+                    <td class="text-danger">Required</td>
+                    <td>The catalog or design designator code (e.g. 1529, 9041).</td>
+                  </tr>
+                  <tr>
+                    <td class="font-monospace fw-bold">Size</td>
+                    <td>Text</td>
+                    <td class="text-danger">Required</td>
+                    <td>Size notation (e.g. 40, XL, L, XXL).</td>
+                  </tr>
+                  <tr>
+                    <td class="font-monospace">Colour</td>
+                    <td>Text</td>
+                    <td class="text-muted">Optional</td>
+                    <td>The styling colour of the article.</td>
+                  </tr>
+                  <tr>
+                    <td class="font-monospace">Box Number</td>
+                    <td>Text</td>
+                    <td class="text-muted">Optional</td>
+                    <td>Warehouse bin/box storage location.</td>
+                  </tr>
+                  <tr>
+                    <td class="font-monospace fw-bold">Available Quantity</td>
+                    <td>Number</td>
+                    <td class="text-danger">Required</td>
+                    <td>The physical stock count taking level.</td>
+                  </tr>
+                  <tr>
+                    <td class="font-monospace fw-bold">Rate</td>
+                    <td>Decimal</td>
+                    <td class="text-danger">Required</td>
+                    <td>Cost / selling rate of the article.</td>
+                  </tr>
+                  <tr>
+                    <td class="font-monospace fw-bold">MRP</td>
+                    <td>Decimal</td>
+                    <td class="text-danger">Required</td>
+                    <td>Maximum Retail Price of the article.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="alert alert-warning mt-3 mb-0 small" role="alert" style="border-radius: 8px;">
+              <i class="bi bi-exclamation-circle-fill me-1"></i>
+              <strong>Notice:</strong> Duplicate uploads are automatically prevented. Re-uploading a file with the same filename will result in an error.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

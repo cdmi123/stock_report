@@ -1,0 +1,257 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-3 p-md-4 fade-in-up">
+    <!-- Page Header -->
+    <div class="mb-4">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <div class="bg-primary bg-opacity-10 rounded-lg p-3" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+          <i class="bi bi-file-earmark-arrow-up text-primary" style="font-size: 24px;"></i>
+        </div>
+        <div>
+          <h3 class="mb-0 fw-bold">Upload Sales File</h3>
+          <p class="text-muted mb-0 small">Import daily sales transactions from your point of sale system</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-12 col-lg-9">
+        <!-- Error Alert -->
+        <% if (error) { %>
+          <div class="alert alert-danger alert-dismissible fade show d-flex align-items-start gap-3" role="alert" style="border-radius: 10px; border-left: 4px solid #ef4444;">
+            <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px; margin-top: 2px;"></i>
+            <div>
+              <strong>Upload Failed</strong>
+              <p class="mb-0 mt-1 small"><%= error %></p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        <% } %>
+
+        <!-- Success Alert -->
+        <% if (success) { %>
+          <div class="alert alert-success alert-dismissible fade show d-flex align-items-start gap-3" role="alert" style="border-radius: 10px; border-left: 4px solid #10b981;">
+            <i class="bi bi-check-circle-fill" style="font-size: 18px; margin-top: 2px;"></i>
+            <div>
+              <strong>Import Successful</strong>
+              <p class="mb-0 mt-1 small"><%= success %></p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        <% } %>
+
+        <!-- Processing Summary -->
+        <% if (success && (shortagesCount > 0 || unmatchedCount > 0)) { %>
+          <div class="erp-card mb-4 border-start border-4" style="border-left-color: #f59e0b !important; background-color: rgba(245, 158, 11, 0.03);">
+            <div class="d-flex align-items-start gap-3">
+              <i class="bi bi-exclamation-lg text-warning" style="font-size: 22px; margin-top: 2px;"></i>
+              <div style="flex: 1;">
+                <h6 class="fw-bold mb-3">Processing Summary</h6>
+                <div class="row g-2">
+                  <% if (shortagesCount > 0) { %>
+                    <div class="col-12 col-md-6">
+                      <div class="p-3 rounded" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                          <span class="badge bg-warning" style="font-size: 11px;">INFO</span>
+                          <strong style="font-size: 13px;"><%= shortagesCount %> Shortages Detected</strong>
+                        </div>
+                        <p class="text-muted mb-0 small">Stock was depleted. The system has automatically generated pending inter-branch transfer recommendations.</p>
+                      </div>
+                    </div>
+                  <% } %>
+                  <% if (unmatchedCount > 0) { %>
+                    <div class="col-12 col-md-6">
+                      <div class="p-3 rounded" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                          <span class="badge bg-danger" style="font-size: 11px;">ERROR</span>
+                          <strong style="font-size: 13px;"><%= unmatchedCount %> Unmatched Rows</strong>
+                        </div>
+                        <p class="text-muted mb-0 small">Some items could not be matched using Design/Size/Name priority rules and were skipped.</p>
+                      </div>
+                    </div>
+                  <% } %>
+                </div>
+                <% if (unmatched && unmatched.length > 0) { %>
+                  <div class="mt-3 pt-3 border-top">
+                    <div class="small fw-semibold text-muted mb-2">Unmatched Entries:</div>
+                    <div class="rounded p-2" style="background-color: var(--bg-secondary); max-height: 150px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 11px;">
+                      <% unmatched.forEach((item, i) => { %>
+                        <div class="text-danger border-bottom py-1" style="border-color: var(--border-color);">
+                          <span class="text-muted"><%= i+1 %>.</span> <%= item %>
+                        </div>
+                      <% }) %>
+                    </div>
+                  </div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% } %>
+
+        <!-- Upload Card -->
+        <div class="erp-card mb-4">
+          <h5 class="fw-bold mb-4 pb-3 border-bottom">Import Sales Data</h5>
+
+          <form action="/sales/upload" method="POST" enctype="multipart/form-data" id="salesUploadForm">
+            
+            <!-- Branch Selection (Super Admin) -->
+            <% if (role === 'Super Admin') { %>
+              <div class="mb-4">
+                <label for="branch_id" class="form-label fw-semibold mb-2">Select Branch</label>
+                <select class="form-select" id="branch_id" name="branch_id" required style="border-radius: 8px; border: 1px solid var(--border-color);">
+                  <option value="" disabled selected>Choose a branch...</option>
+                  <% branches.forEach(b => { %>
+                    <option value="<%= b._id %>"><%= b.branch_name %> <span class="text-muted">(<%= b.city %>)</span></option>
+                  <% }) %>
+                </select>
+                <small class="text-muted d-block mt-2">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Select which branch logged these sales
+                </small>
+              </div>
+            <% } else { %>
+              <input type="hidden" name="branch_id" value="<%= userBranchId %>">
+            <% } %>
+
+            <!-- File Upload Area -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold mb-3">Select Sales File</label>
+              <div class="upload-area rounded border-2 border-dashed p-4 text-center" style="border-color: var(--border-color); cursor: pointer; transition: all 0.2s ease; background-color: var(--bg-secondary);" id="uploadArea">
+                <i class="bi bi-cloud-arrow-up" style="font-size: 40px; color: var(--primary); margin-bottom: 12px; display: block;"></i>
+                <h6 class="fw-semibold mb-1">Drag and drop your file here</h6>
+                <p class="text-muted small mb-3">or click to select from your device</p>
+                <div class="d-flex gap-2 justify-content-center flex-wrap">
+                  <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size: 11px; padding: 6px 10px;">Excel (.xlsx)</span>
+                  <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size: 11px; padding: 6px 10px;">Legacy (.xls)</span>
+                  <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size: 11px; padding: 6px 10px;">Max 5MB</span>
+                </div>
+                <input class="form-control d-none" type="file" id="sale_file" name="sale_file" accept=".xlsx, .xls" required>
+              </div>
+              <small class="text-muted d-block mt-2">
+                <i class="bi bi-check-circle me-1"></i>
+                Each row represents one sold piece. Duplicates are automatically aggregated.
+              </small>
+            </div>
+
+            <!-- File Info Display -->
+            <div id="fileInfo" class="mb-4 p-3 rounded" style="background-color: var(--bg-secondary); display: none; border-left: 3px solid var(--primary);">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <strong id="fileName" class="small">filename.xlsx</strong>
+                  <p class="text-muted mb-0 small" id="fileSize">Size: --</p>
+                </div>
+                <button type="button" class="btn btn-sm btn-ghost" id="clearFile">
+                  <i class="bi bi-x-circle"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-primary w-100 fw-semibold py-2" style="border-radius: 8px; height: 44px;">
+              <i class="bi bi-cloud-arrow-up me-2"></i>
+              Start Sales Import
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Sidebar Info -->
+      <div class="col-12 col-lg-3 mt-4 mt-lg-0">
+        <div class="erp-card" style="position: sticky; top: 80px;">
+          <h6 class="fw-bold mb-3">Quick Tips</h6>
+          <div class="small">
+            <div class="mb-3 pb-3 border-bottom">
+              <div class="d-flex gap-2 mb-1">
+                <i class="bi bi-check-circle text-success" style="flex-shrink: 0;"></i>
+                <span class="fw-semibold">Duplicates</span>
+              </div>
+              <p class="text-muted mb-0" style="font-size: 12px;">Automatically aggregated into one entry</p>
+            </div>
+            <div class="mb-3 pb-3 border-bottom">
+              <div class="d-flex gap-2 mb-1">
+                <i class="bi bi-check-circle text-success" style="flex-shrink: 0;"></i>
+                <span class="fw-semibold">Shortages</span>
+              </div>
+              <p class="text-muted mb-0" style="font-size: 12px;">Auto-creates transfer recommendations</p>
+            </div>
+            <div class="mb-3 pb-3 border-bottom">
+              <div class="d-flex gap-2 mb-1">
+                <i class="bi bi-check-circle text-success" style="flex-shrink: 0;"></i>
+                <span class="fw-semibold">Priority</span>
+              </div>
+              <p class="text-muted mb-0" style="font-size: 12px;">Design+Size > Item Name+Size</p>
+            </div>
+            <div>
+              <div class="d-flex gap-2 mb-1">
+                <i class="bi bi-info-circle text-info" style="flex-shrink: 0;"></i>
+                <span class="fw-semibold">Support</span>
+              </div>
+              <p class="text-muted mb-0" style="font-size: 12px;">Contact admin for format help</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Drag and drop file upload
+  const uploadArea = document.getElementById('uploadArea');
+  const fileInput = document.getElementById('sale_file');
+  const fileInfo = document.getElementById('fileInfo');
+  const fileName = document.getElementById('fileName');
+  const fileSize = document.getElementById('fileSize');
+  const clearBtn = document.getElementById('clearFile');
+
+  if (uploadArea) {
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.style.backgroundColor = 'var(--primary-light)';
+      uploadArea.style.borderColor = 'var(--primary)';
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.backgroundColor = 'var(--bg-secondary)';
+      uploadArea.style.borderColor = 'var(--border-color)';
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.style.backgroundColor = 'var(--bg-secondary)';
+      uploadArea.style.borderColor = 'var(--border-color)';
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        fileInput.files = files;
+        updateFileInfo();
+      }
+    });
+
+    fileInput.addEventListener('change', updateFileInfo);
+
+    function updateFileInfo() {
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        fileName.textContent = file.name;
+        fileSize.textContent = `Size: ${(file.size / 1024).toFixed(2)} KB`;
+        fileInfo.style.display = 'block';
+      }
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        fileInput.value = '';
+        fileInfo.style.display = 'none';
+      });
+    }
+  }
+</script>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,204 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-3 p-md-4 fade-in-up">
+    <div class="row mb-4">
+      <div class="col-12">
+        <h4 class="fw-bold mb-1"><i class="bi bi-file-earmark-bar-graph-fill me-2 text-primary"></i>Reports Center</h4>
+        <p class="text-muted mb-0">Generate inventory balances, sales metrics, and logistics performance reports. Export reports to Excel, PDF, or print directly.</p>
+      </div>
+    </div>
+
+    <!-- Reports Grid -->
+    <div class="row">
+      
+      <!-- Report 1: Branch Wise Stock -->
+      <div class="col-xl-4 col-md-6 mb-4">
+        <div class="erp-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-box-seam"></i></div>
+              <h5 class="fw-bold mb-0">Branch Stock Report</h5>
+            </div>
+            <p class="small text-muted">Lists current available inventory quantities, sizes, rates, and values for the selected branch.</p>
+          </div>
+          <a href="/reports/branch-stock" class="btn btn-outline-primary w-100 mt-3 small">Generate Report</a>
+        </div>
+      </div>
+
+      <!-- Report 2: Consolidated Stock -->
+      <div class="col-xl-4 col-md-6 mb-4">
+        <div class="erp-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-intersect"></i></div>
+              <h5 class="fw-bold mb-0">Consolidated Stock</h5>
+              <% if (role !== 'Super Admin') { %>
+                <span class="badge bg-danger-subtle text-danger ms-auto small" style="font-size: 0.65rem;">Admin Only</span>
+              <% } %>
+            </div>
+            <p class="small text-muted">A dynamic pivot matrix table detailing product quantities across all outlets alongside global totals.</p>
+          </div>
+          <% if (role === 'Super Admin') { %>
+            <a href="/reports/consolidated-stock" class="btn btn-outline-primary w-100 mt-3 small">Generate Report</a>
+          <% } else { %>
+            <button class="btn btn-outline-secondary w-100 mt-3 small" disabled>Restricted</button>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Report 3: Daily Sales -->
+      <div class="col-xl-4 col-md-6 mb-4">
+        <div class="erp-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-calendar-day"></i></div>
+              <h5 class="fw-bold mb-0">Daily Sales</h5>
+            </div>
+            <p class="small text-muted">Tracks daily sales totals, sold counts, average values, and total revenues generated.</p>
+          </div>
+          <a href="/reports/daily-sales" class="btn btn-outline-primary w-100 mt-3 small">Generate Report</a>
+        </div>
+      </div>
+
+      <!-- Report 4: Monthly Sales -->
+      <div class="col-xl-4 col-md-6 mb-4">
+        <div class="erp-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-calendar-month"></i></div>
+              <h5 class="fw-bold mb-0">Monthly Sales</h5>
+            </div>
+            <p class="small text-muted">Aggregates sales performance by month/year, allowing for high-level seasonal metrics comparisons.</p>
+          </div>
+          <a href="/reports/monthly-sales" class="btn btn-outline-primary w-100 mt-3 small">Generate Report</a>
+        </div>
+      </div>
+
+      <!-- Report 5: Transfer History -->
+      <div class="col-xl-4 col-md-6 mb-4">
+        <div class="erp-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-arrow-left-right"></i></div>
+              <h5 class="fw-bold mb-0">Transfers History</h5>
+            </div>
+            <p class="small text-muted">A full logs ledger of all inter-branch stock transfer records, transit statuses, and movements.</p>
+          </div>
+          <a href="/reports/transfers" class="btn btn-outline-primary w-100 mt-3 small">Generate Report</a>
+        </div>
+      </div>
+
+      <!-- Report 6: Pending Transfers -->
+      <div class="col-xl-4 col-md-6 mb-4">
+        <div class="erp-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-hourglass-split"></i></div>
+              <h5 class="fw-bold mb-0">Pending Transfers</h5>
+            </div>
+            <p class="small text-muted">Focuses exclusively on pending recommendations waiting for managerial approval or dispatching.</p>
+          </div>
+          <a href="/reports/pending-transfers" class="btn btn-outline-primary w-100 mt-3 small">Generate Report</a>
+        </div>
+      </div>
+
+      <!-- Report 7: Purchase Requirements -->
+      <div class="col-xl-4 col-md-6 mb-4">
+        <div class="erp-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon bg-dark bg-opacity-10 text-dark"><i class="bi bi-bag-plus"></i></div>
+              <h5 class="fw-bold mb-0">Purchase Requirements</h5>
+            </div>
+            <p class="small text-muted">Generates a list of articles which have negative stocks (unfulfilled backorders) or overall inventory <= 2.</p>
+          </div>
+          <a href="/reports/purchase-requirement" class="btn btn-outline-primary w-100 mt-3 small">Generate Report</a>
+        </div>
+      </div>
+
+      <!-- Report 8: Low Stock -->
+      <div class="col-xl-4 col-md-6 mb-4">
+        <div class="erp-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-exclamation-triangle"></i></div>
+              <h5 class="fw-bold mb-0">Low Stock Report</h5>
+            </div>
+            <p class="small text-muted">Identifies items within the branch where available quantity is below the critical threshold level (< 5).</p>
+          </div>
+          <a href="/reports/low-stock" class="btn btn-outline-primary w-100 mt-3 small">Generate Report</a>
+        </div>
+      </div>
+
+      <!-- Report 9: Dead Stock -->
+      <div class="col-xl-4 col-md-6 mb-4">
+        <div class="erp-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-trash-slash"></i></div>
+              <h5 class="fw-bold mb-0">Dead Stock Report</h5>
+            </div>
+            <p class="small text-muted">Lists articles that have positive available quantity in stock but have recorded 0 sales in the last 30 days.</p>
+          </div>
+          <a href="/reports/dead-stock" class="btn btn-outline-primary w-100 mt-3 small">Generate Report</a>
+        </div>
+      </div>
+
+      <!-- Report 10: Fast Moving Products -->
+      <div class="col-xl-4 col-md-6 mb-4">
+        <div class="erp-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-activity"></i></div>
+              <h5 class="fw-bold mb-0">Fast Moving Products</h5>
+            </div>
+            <p class="small text-muted">Lists the highest velocity articles sorted by units sold within the trailing 30 days window.</p>
+          </div>
+          <a href="/reports/fast-moving" class="btn btn-outline-primary w-100 mt-3 small">Generate Report</a>
+        </div>
+      </div>
+
+      <!-- Report 11: Slow Moving Products -->
+      <div class="col-xl-4 col-md-6 mb-4">
+        <div class="erp-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-tortoise"></i></div>
+              <h5 class="fw-bold mb-0">Slow Moving Products</h5>
+            </div>
+            <p class="small text-muted">Highlights positive stock articles that represent low turnover frequency (slowest sales counts first).</p>
+          </div>
+          <a href="/reports/slow-moving" class="btn btn-outline-primary w-100 mt-3 small">Generate Report</a>
+        </div>
+      </div>
+
+      <!-- Report 12: Branch Performance -->
+      <div class="col-xl-4 col-md-6 mb-4">
+        <div class="erp-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-trophy"></i></div>
+              <h5 class="fw-bold mb-0">Branch Performance</h5>
+              <% if (role !== 'Super Admin') { %>
+                <span class="badge bg-danger-subtle text-danger ms-auto small" style="font-size: 0.65rem;">Admin Only</span>
+              <% } %>
+            </div>
+            <p class="small text-muted">Comparative breakdown showing total units sold and corresponding revenues generated across branches.</p>
+          </div>
+          <% if (role === 'Super Admin') { %>
+            <a href="/reports/branch-performance" class="btn btn-outline-primary w-100 mt-3 small">Generate Report</a>
+          <% } else { %>
+            <button class="btn btn-outline-secondary w-100 mt-3 small" disabled>Restricted</button>
+          <% } %>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

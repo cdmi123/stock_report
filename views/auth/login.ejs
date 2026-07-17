@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atelier Gateway | Atlantic Arthur Studio</title>
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Google Fonts: Cormorant Garamond for luxury serif & Plus Jakarta Sans for clean studio reading -->
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Theme 1: Selvedge Denim (Default Accent) */
+      --accent-color: #3b5a80;
+      --accent-rgb: 59, 90, 128;
+      --bg-studio: #f6f5f2;
+      --text-dark: #1a1e26;
+      --text-muted: #6e7682;
+      --border-color: #e2e1dc;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-studio);
+      color: var(--text-dark);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      transition: background-color 0.4s ease;
+    }
+
+    .atelier-container {
+      background: #ffffff;
+      border-radius: 24px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.03);
+      width: 100%;
+      max-width: 1100px;
+      min-height: 700px;
+      overflow: hidden;
+    }
+
+    /* Left Moodboard / Workbench Panel */
+    .workbench-panel {
+      position: relative;
+      background-color: #fcfbfa;
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 40px;
+      transition: all 0.4s ease;
+    }
+
+    /* Sewing Pattern Drafting Grid Overlay */
+    .pattern-grid {
+      position: absolute;
+      inset: 0;
+      background-size: 20px 20px;
+      background-image: 
+        linear-gradient(to right, rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+      pointer-events: none;
+      opacity: 0.8;
+    }
+
+    .brand-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 700;
+      font-size: 2rem;
+      letter-spacing: 0.02em;
+      color: var(--text-dark);
+      text-transform: uppercase;
+    }
+
+    /* Mini Spec Sheet Display */
+    .spec-card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.01);
+      z-index: 10;
+      transition: all 0.3s ease;
+    }
+
+    .spec-table th, .spec-table td {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    .spec-table th {
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    /* Dynamic Swatches */
+    .swatch-group {
+      display: flex;
+      gap: 12px;
+      z-index: 10;
+    }
+    .swatch-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid #ffffff;
+      outline: 2px solid transparent;
+      cursor: pointer;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 4px 10px rgba(0,0,0,0.05);
+      transition: all 0.2s ease;
+    }
+    .swatch-btn:hover {
+      transform: scale(1.08);
+    }
+    .swatch-btn.active {
+      outline-color: var(--accent-color);
+      transform: scale(1.05);
+    }
+
+    /* Right Login Hang-tag Form Panel */
+    .hangtag-panel {
+      padding: 50px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background-color: #ffffff;
+    }
+
+    /* Custom Design Hang-Tag Look */
+    .hangtag-card {
+      position: relative;
+      background: #fafaf9;
+      border: 1px solid var(--border-color);
+      border-top: 8px solid var(--accent-color);
+      border-radius: 8px;
+      padding: 40px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+      transition: border-top-color 0.4s ease;
+    }
+
+    /* Thread hole decoration on hangtag card */
+    .hangtag-card::before {
+      content: '';
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 14px;
+      height: 14px;
+      background: var(--bg-studio);
+      border: 1px solid var(--border-color);
+      border-radius: 50%;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .form-control {
+      background-color: #ffffff;
+      border: 1px solid var(--border-color);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    .form-control:focus {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+      background-color: #ffffff;
+    }
+
+    .input-group-text {
+      background-color: #ffffff;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      border-radius: 8px;
+    }
+
+    .btn-atelier {
+      background-color: var(--accent-color);
+      border: none;
+      color: #ffffff;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.2);
+    }
+
+    .btn-atelier:hover {
+      background-color: #1a2230;
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .btn-atelier:active {
+      transform: translateY(1px);
+    }
+
+    /* Custom Apparel Draft illustration */
+    .draft-svg-container {
+      position: absolute;
+      right: 10px;
+      top: 20%;
+      width: 250px;
+      height: 250px;
+      opacity: 0.25;
+      pointer-events: none;
+      transition: all 0.4s ease;
+    }
+
+    /* ===== Responsive Login Layout ===== */
+    @media (max-width: 991px) {
+      body {
+        align-items: flex-start;
+        padding: 12px 0;
+      }
+
+      .atelier-container {
+        min-height: auto;
+        border-radius: 16px;
+        margin: 0.75rem !important;
+      }
+
+      .hangtag-panel {
+        padding: 28px 20px;
+      }
+
+      .hangtag-card {
+        padding: 28px 22px;
+      }
+    }
+
+    @media (max-width: 575px) {
+      body {
+        padding: 8px 0;
+      }
+
+      .atelier-container {
+        margin: 0.5rem !important;
+        border-radius: 14px;
+      }
+
+      .hangtag-panel {
+        padding: 20px 16px;
+      }
+
+      .hangtag-card {
+        padding: 22px 18px;
+      }
+
+      .brand-title {
+        font-size: 1.5rem;
+      }
+
+      .spec-table th,
+      .spec-table td {
+        font-size: 0.65rem;
+        padding: 3px 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- MAIN ATELIER VIEWPORT CONTAINER -->
+  <div class="atelier-container container-fluid m-3">
+    <div class="row g-0 h-100">
+      
+      <!-- LEFT PANEL: moodboard, specs, interactive swatches -->
+      <div class="col-lg-6 d-none d-lg-flex workbench-panel" id="workbenchBg">
+        <div class="pattern-grid"></div>
+
+        <!-- Upper Info Section -->
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-scissors fs-4" style="color: var(--accent-color);"></i>
+            <span class="text-uppercase tracking-widest text-muted" style="font-size: 0.75rem; font-weight: 700;">Student Workspace Matrix</span>
+          </div>
+          <h1 class="brand-title">Atlantic Arthur Studio</h1>
+          <p class="text-muted" style="font-size: 0.85rem; max-width: 320px;">Apparel Assembly, Clothing Manufacture & Textile Allocation Control.</p>
+        </div>
+
+        <!-- Dynamic Apparel Sketch Overlay -->
+        <div class="draft-svg-container" id="draftIllustration">
+          <!-- Pattern sleeve drawing via inline SVG -->
+          <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M40 30 H160 L140 180 H60 Z" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/>
+            <path d="M100 30 V180" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2"/>
+            <circle cx="100" cy="105" r="5" fill="currentColor"/>
+            <text x="10" y="20" fill="currentColor" font-family="monospace" font-size="10">SAMPLE NO: AAS-26</text>
+            <text x="10" y="195" fill="currentColor" font-family="monospace" font-size="10">SCALE: 1:10 (CM)</text>
+          </svg>
+        </div>
+
+        <!-- Spec Measurement sheet component (updates dynamically) -->
+        <div class="spec-card">
+          <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+            <span class="text-dark fw-bold text-xs" style="font-size: 0.8rem;" id="sampleName">Sample Sleeve Pattern</span>
+            <span class="badge text-uppercase bg-light text-secondary border" style="font-size: 0.65rem;" id="materialName">Raw Denim</span>
+          </div>
+          <table class="table table-borderless spec-table mb-0">
+            <thead>
+              <tr>
+                <th>A: Sleeve</th>
+                <th>B: Cuff</th>
+                <th>C: Inseam</th>
+                <th>D: Cap Ht</th>
+                <th>Weight</th>
+              </tr>
+            </thead>
+            <tbody id="specTableBody">
+              <tr>
+                <td>61.5 cm</td>
+                <td>24.0 cm</td>
+                <td>46.5 cm</td>
+                <td>14.2 cm</td>
+                <td>12.5 oz</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Dynamic Fabric Swatch Controller (Interactive showcase) -->
+        <div>
+          <label class="d-block text-muted text-xs text-uppercase tracking-wider fw-bold mb-2">Select Active Production Swatch</label>
+          <div class="swatch-group">
+            <button type="button" class="swatch-btn active" id="swatchDenim" onclick="applySwatch('denim')" title="Raw Selvedge Denim" style="background-color: #3b5a80;"></button>
+            <button type="button" class="swatch-btn" id="swatchLinen" onclick="applySwatch('linen')" title="Oatmeal Organic Linen" style="background-color: #dfdbcb;"></button>
+            <button type="button" class="swatch-btn" id="swatchTweed" onclick="applySwatch('tweed')" title="Emerald Tweed Wool" style="background-color: #2c443b;"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL: designer label hanging login form -->
+      <div class="col-lg-6 hangtag-panel">
+        <div class="mx-auto w-100" style="max-width: 400px;">
+          
+          <div class="hangtag-card">
+            
+            <div class="text-center mb-4">
+              <span class="text-uppercase tracking-widest text-muted d-block mb-1" style="font-size: 0.7rem; font-weight: 700;">Atelier Secure Node V2.1</span>
+              <h2 class="fw-bold mb-1 text-dark" style="font-family: 'Cormorant Garamond', serif; font-size: 1.85rem;">Sign In</h2>
+              <div class="text-muted" style="font-size: 0.75rem;">Authenticate with student studio credentials.</div>
+            </div>
+
+            <!-- EJS ERROR TEMPLATE HANDLING SYSTEM -->
+            <!-- Safe execution fallback checking to run smoothly in standard web browsers -->
+            <% if (typeof error !== 'undefined' && error) { %>
+              <div class="alert alert-danger d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 10px;" id="ejsAlert">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <div class="small"><%= error %></div>
+              </div>
+            <% } %>
+
+            <!-- Static Sandbox Alert Module (Simulated warning for static preview mode only) -->
+            <div class="alert alert-danger d-none align-items-center gap-2 mb-4" role="alert" style="border-radius: 10px;" id="sandboxAlert">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              <div class="small" id="sandboxErrorMessage">Verification failed. Access Token could not be validated.</div>
+            </div>
+
+            <!-- LOGIN CREDENTIAL INPUTS -->
+            <form action="/auth/login" method="POST" id="apparelAuthForm" onsubmit="handleFormSubmission(event)">
+              
+              <!-- Email Input block -->
+              <div class="mb-3">
+                <label for="email" class="form-label fw-semibold text-secondary" style="font-size: 0.8rem;">Operator Email</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-envelope"></i></span>
+                  <input type="email" class="form-control border-start-0" id="email" name="email" placeholder="student@atlanticarthur.studio" required>
+                </div>
+              </div>
+
+              <!-- Password Input block -->
+              <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <label for="password" class="form-label fw-semibold text-secondary mb-0" style="font-size: 0.8rem;">Pattern-Draft Code</label>
+                  <a href="#" class="text-xs text-decoration-none" style="font-size: 0.72rem; color: var(--accent-color)">Recover Code</a>
+                </div>
+                <div class="input-group">
+                  <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-lock"></i></span>
+                  <input type="password" class="form-control border-start-0 border-end-0" id="password" name="password" placeholder="••••••••" required>
+                  <button type="button" class="input-group-text bg-white border-start-0 text-muted" onclick="togglePasswordVisibility()" title="Toggle visibility state">
+                    <i class="bi bi-eye" id="passwordToggleIcon"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Submit gate -->
+              <button type="submit" class="btn btn-atelier w-100" id="btnSubmit">
+                <span id="btnRegularText">Authorize Sync</span>
+                <span class="spinner-border spinner-border-sm d-none ms-2" id="btnLoadingSpinner" role="status" aria-hidden="true"></span>
+              </button>
+            </form>
+
+            <div class="text-center mt-4 pt-3 border-top" style="border-color: var(--border-color) !important;">
+              <span class="text-muted d-block" style="font-size: 0.7rem;">Not assigned to pattern-making classes? <a href="#" class="text-decoration-none" style="color: var(--accent-color)">Consult Studio Lead</a></span>
+            </div>
+
+          </div>
+
+          <!-- MOCK PREVIEW CONSOLE TOGGLE PANEL (Hidden if running directly on Node server) -->
+          <div class="mt-3 p-2 border rounded-3 bg-light d-none justify-content-between align-items-center" id="demoSandboxToggleContainer">
+            <span class="text-secondary" style="font-size: 0.7rem; font-weight: 500;"><i class="bi bi-laptop me-1"></i> Static Demo Mode:</span>
+            <button class="btn btn-outline-secondary btn-xs py-1 px-2 text-xs" style="font-size: 0.65rem;" onclick="toggleDemoErrorAlert()">Test Alert Screen</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SYSTEM UTILITIES & INTERACTIVITY SCRIPTS -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      detectSandboxPreview();
+    });
+
+    // MOCK DATA: Fabric swatches theme values
+    const swatctThemes = {
+      denim: {
+        accentColor: '#3b5a80',
+        accentRgb: '59, 90, 128',
+        bgStudio: '#f6f5f2',
+        sampleName: 'Sample Sleeve Pattern',
+        materialName: 'Raw Denim',
+        illustrationOpacity: '0.25',
+        specs: `
+          <tr>
+            <td>61.5 cm</td>
+            <td>24.0 cm</td>
+            <td>46.5 cm</td>
+            <td>14.2 cm</td>
+            <td>12.5 oz</td>
+          </tr>
+        `
+      },
+      linen: {
+        accentColor: '#8a8264',
+        accentRgb: '138, 130, 100',
+        bgStudio: '#faf8f4',
+        sampleName: 'Loose Linen Shirt Bodice',
+        materialName: 'French Linen',
+        illustrationOpacity: '0.15',
+        specs: `
+          <tr>
+            <td>72.0 cm</td>
+            <td>56.5 cm</td>
+            <td>28.0 cm</td>
+            <td>0.0 cm</td>
+            <td>180 gsm</td>
+          </tr>
+        `
+      },
+      tweed: {
+        accentColor: '#2c443b',
+        accentRgb: '44, 68, 59',
+        bgStudio: '#eff2ef',
+        sampleName: 'Tailored Blazer Back Panel',
+        materialName: 'Wool Tweed',
+        illustrationOpacity: '0.20',
+        specs: `
+          <tr>
+            <td>78.5 cm</td>
+            <td>51.0 cm</td>
+            <td>48.5 cm</td>
+            <td>18.0 cm</td>
+            <td>420 gsm</td>
+          </tr>
+        `
+      }
+    };
+
+    // APPLY SWATCH CHANGES
+    function applySwatch(swatchKey) {
+      const activeTheme = swatctThemes[swatchKey];
+      if (!activeTheme) return;
+
+      // Update button highlights
+      document.querySelectorAll('.swatch-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      const swatchBtnId = 'swatch' + swatchKey.charAt(0).toUpperCase() + swatchKey.slice(1);
+      const activeBtn = document.getElementById(swatchBtnId);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      // Update CSS Variables dynamically
+      document.documentElement.style.setProperty('--accent-color', activeTheme.accentColor);
+      document.documentElement.style.setProperty('--accent-rgb', activeTheme.accentRgb);
+      document.documentElement.style.setProperty('--bg-studio', activeTheme.bgStudio);
+
+      // Update spec panel labels
+      document.getElementById('sampleName').textContent = activeTheme.sampleName;
+      document.getElementById('materialName').textContent = activeTheme.materialName;
+      document.getElementById('specTableBody').innerHTML = activeTheme.specs;
+
+      // Adapt structural illustration graphics opacity
+      document.getElementById('draftIllustration').style.opacity = activeTheme.illustrationOpacity;
+    }
+
+    // PASSWORD SHIELDS TOGGLER
+    function togglePasswordVisibility() {
+      const pField = document.getElementById("password");
+      const pIcon = document.getElementById("passwordToggleIcon");
+
+      if (pField.type === "password") {
+        pField.type = "text";
+        pIcon.className = "bi bi-eye-slash";
+      } else {
+        pField.type = "password";
+        pIcon.className = "bi bi-eye";
+      }
+    }
+
+    // FORM LOADER ANIMATION DISPATCHER
+    function handleFormSubmission(event) {
+      const btn = document.getElementById("btnSubmit");
+      const txt = document.getElementById("btnRegularText");
+      const spinner = document.getElementById("btnLoadingSpinner");
+
+      // Lock forms, fire loading states
+      btn.setAttribute("disabled", "true");
+      txt.textContent = "Validating Stitch Patterns...";
+      spinner.classList.remove("d-none");
+    }
+
+    // DETECT SANDBOX PREVIEW
+    // Evaluates if the file is being run directly inside static preview iframe, safely hiding raw EJS tags
+    function detectSandboxPreview() {
+      const ejsAlert = document.getElementById("ejsAlert");
+      const demoControls = document.getElementById("demoSandboxToggleContainer");
+
+      // If EJS compiled failed, template tags are outputting literally
+      if (!ejsAlert || ejsAlert.innerHTML.includes("<" + "%")) {
+        if (ejsAlert) {
+          ejsAlert.style.setProperty("display", "none", "important");
+        }
+        // Enable manual sandbox mock tools for the client
+        demoControls.classList.remove("d-none");
+        demoControls.classList.add("d-flex");
+      }
+    }
+
+    // STATIC ENVIRONMENT ALERTS TEST SWITCH
+    function toggleDemoErrorAlert() {
+      const alertDiv = document.getElementById("sandboxAlert");
+      alertDiv.classList.toggle("d-none");
+      alertDiv.classList.toggle("d-flex");
+    }
+  </script>
+
+</body>
+</html>

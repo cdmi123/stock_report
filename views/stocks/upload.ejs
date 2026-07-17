@@ -1,0 +1,219 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-3 p-md-4 fade-in-up">
+    <!-- Page Header -->
+    <div class="mb-4">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <div class="bg-primary bg-opacity-10 rounded-lg p-3" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+          <i class="bi bi-box-seam text-primary" style="font-size: 24px;"></i>
+        </div>
+        <div>
+          <h3 class="mb-0 fw-bold">Upload Stock Inventory</h3>
+          <p class="text-muted mb-0 small">Update inventory levels and stock valuations</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-12 col-lg-9">
+        <!-- Error Alert -->
+        <% if (error) { %>
+          <div class="alert alert-danger alert-dismissible fade show d-flex align-items-start gap-3" role="alert" style="border-radius: 10px; border-left: 4px solid #ef4444;">
+            <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px; margin-top: 2px;"></i>
+            <div>
+              <strong>Upload Failed</strong>
+              <p class="mb-0 mt-1 small"><%= error %></p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        <% } %>
+
+        <!-- Success Alert -->
+        <% if (success) { %>
+          <div class="alert alert-success alert-dismissible fade show d-flex align-items-start gap-3" role="alert" style="border-radius: 10px; border-left: 4px solid #10b981;">
+            <i class="bi bi-check-circle-fill" style="font-size: 18px; margin-top: 2px;"></i>
+            <div>
+              <strong>Import Successful</strong>
+              <p class="mb-0 mt-1 small"><%= success %></p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        <% } %>
+
+        <!-- Duplicate Upload Warning -->
+        <div class="alert alert-info alert-dismissible fade show d-flex align-items-start gap-3" role="alert" style="border-radius: 10px; border-left: 4px solid #3b82f6;">
+          <i class="bi bi-lightbulb-fill" style="font-size: 18px; margin-top: 2px;"></i>
+          <div>
+            <strong>Multiple Upload Notice</strong>
+            <p class="mb-0 mt-1 small">You can upload stock files multiple times. Each upload <strong>replaces</strong> the previous stock levels completely. Use caution if performing multiple uploads in succession.</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+
+        <!-- Upload Card -->
+        <div class="erp-card mb-4">
+          <h5 class="fw-bold mb-4 pb-3 border-bottom">Import Inventory Data</h5>
+
+          <form action="/stocks/upload" method="POST" enctype="multipart/form-data" id="stockUploadForm">
+            
+            <!-- Branch Selection (Super Admin) -->
+            <% if (role === 'Super Admin') { %>
+              <div class="mb-4">
+                <label for="branch_id" class="form-label fw-semibold mb-2">Select Branch</label>
+                <select class="form-select" id="branch_id" name="branch_id" required style="border-radius: 8px; border: 1px solid var(--border-color);">
+                  <option value="" disabled selected>Choose a branch...</option>
+                  <% branches.forEach(b => { %>
+                    <option value="<%= b._id %>"><%= b.branch_name %> <span class="text-muted">(<%= b.city %>)</span></option>
+                  <% }) %>
+                </select>
+                <small class="text-muted d-block mt-2">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Select which branch inventory to update
+                </small>
+              </div>
+            <% } else { %>
+              <input type="hidden" name="branch_id" value="<%= userBranchId %>">
+            <% } %>
+
+            <!-- File Upload Area -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold mb-3">Select Inventory File</label>
+              <div class="upload-area rounded border-2 border-dashed p-4 text-center" style="border-color: var(--border-color); cursor: pointer; transition: all 0.2s ease; background-color: var(--bg-secondary);" id="uploadArea">
+                <i class="bi bi-cloud-arrow-up" style="font-size: 40px; color: var(--primary); margin-bottom: 12px; display: block;"></i>
+                <h6 class="fw-semibold mb-1">Drag and drop your inventory file here</h6>
+                <p class="text-muted small mb-3">or click to select from your device</p>
+                <div class="d-flex gap-2 justify-content-center flex-wrap">
+                  <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size: 11px; padding: 6px 10px;">Excel (.xlsx)</span>
+                  <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size: 11px; padding: 6px 10px;">Legacy (.xls)</span>
+                  <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size: 11px; padding: 6px 10px;">Max 5MB</span>
+                </div>
+                <input class="form-control d-none" type="file" id="stock_file" name="stock_file" accept=".xlsx, .xls" required>
+              </div>
+              <small class="text-muted d-block mt-2">
+                <i class="bi bi-info-circle me-1"></i>
+                Each row represents current stock levels at the time of upload.
+              </small>
+            </div>
+
+            <!-- File Info Display -->
+            <div id="fileInfo" class="mb-4 p-3 rounded" style="background-color: var(--bg-secondary); display: none; border-left: 3px solid var(--primary);">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <strong id="fileName" class="small">filename.xlsx</strong>
+                  <p class="text-muted mb-0 small" id="fileSize">Size: --</p>
+                </div>
+                <button type="button" class="btn btn-sm btn-ghost" id="clearFile">
+                  <i class="bi bi-x-circle"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-primary w-100 fw-semibold py-2" style="border-radius: 8px; height: 44px;">
+              <i class="bi bi-cloud-arrow-up me-2"></i>
+              Start Stock Import
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Sidebar Info -->
+      <div class="col-12 col-lg-3 mt-4 mt-lg-0">
+        <div class="erp-card" style="position: sticky; top: 80px;">
+          <h6 class="fw-bold mb-3">Quick Tips</h6>
+          <div class="small">
+            <div class="mb-3 pb-3 border-bottom">
+              <div class="d-flex gap-2 mb-1">
+                <i class="bi bi-check-circle text-success" style="flex-shrink: 0;"></i>
+                <span class="fw-semibold">9 Columns</span>
+              </div>
+              <p class="text-muted mb-0" style="font-size: 12px;">All 9 columns required in the specified order</p>
+            </div>
+            <div class="mb-3 pb-3 border-bottom">
+              <div class="d-flex gap-2 mb-1">
+                <i class="bi bi-check-circle text-success" style="flex-shrink: 0;"></i>
+                <span class="fw-semibold">Data Types</span>
+              </div>
+              <p class="text-muted mb-0" style="font-size: 12px;">Use numbers for qty/rate, text for names/codes</p>
+            </div>
+            <div class="mb-3 pb-3 border-bottom">
+              <div class="d-flex gap-2 mb-1">
+                <i class="bi bi-check-circle text-success" style="flex-shrink: 0;"></i>
+                <span class="fw-semibold">File Format</span>
+              </div>
+              <p class="text-muted mb-0" style="font-size: 12px;">Use .xlsx for best compatibility</p>
+            </div>
+            <div>
+              <div class="d-flex gap-2 mb-1">
+                <i class="bi bi-info-circle text-info" style="flex-shrink: 0;"></i>
+                <span class="fw-semibold">Backup</span>
+              </div>
+              <p class="text-muted mb-0" style="font-size: 12px;">Download backup before uploading new stock</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Drag and drop file upload
+  const uploadArea = document.getElementById('uploadArea');
+  const fileInput = document.getElementById('stock_file');
+  const fileInfo = document.getElementById('fileInfo');
+  const fileName = document.getElementById('fileName');
+  const fileSize = document.getElementById('fileSize');
+  const clearBtn = document.getElementById('clearFile');
+
+  if (uploadArea) {
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.style.backgroundColor = 'var(--primary-light)';
+      uploadArea.style.borderColor = 'var(--primary)';
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.backgroundColor = 'var(--bg-secondary)';
+      uploadArea.style.borderColor = 'var(--border-color)';
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.style.backgroundColor = 'var(--bg-secondary)';
+      uploadArea.style.borderColor = 'var(--border-color)';
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        fileInput.files = files;
+        updateFileInfo();
+      }
+    });
+
+    fileInput.addEventListener('change', updateFileInfo);
+
+    function updateFileInfo() {
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        fileName.textContent = file.name;
+        fileSize.textContent = `Size: ${(file.size / 1024).toFixed(2)} KB`;
+        fileInfo.style.display = 'block';
+      }
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        fileInput.value = '';
+        fileInfo.style.display = 'none';
+      });
+    }
+  }
+</script>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,255 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-3 p-md-4 fade-in-up">
+    
+    <!-- Title and Action Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3 border-bottom pb-3">
+      <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
+        <i class="bi bi-arrow-left-right text-primary"></i> Inter-Branch Stock Transfer Center
+      </h4>
+      <% if (role !== 'Staff User') { %>
+        <button type="button" class="btn btn-primary fw-semibold px-4 py-2" data-bs-toggle="modal" data-bs-target="#requestStockModal" style="border-radius: 8px;">
+          <i class="bi bi-plus-lg me-1"></i>Request Stock
+        </button>
+      <% } %>
+    </div>
+
+    <!-- Error/Success Alerts -->
+    <% if (error) { %>
+      <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i><%= error %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+
+    <% if (success) { %>
+      <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i><%= success %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+
+    <!-- Transfers List (Full Width Table) -->
+    <div class="row">
+      <div class="col-12 mb-4">
+        <div class="erp-card shadow-sm" style="border-radius: 16px;">
+          <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-list-task text-success"></i> Stock Transfer Operations
+          </h5>
+          
+          <div class="table-responsive">
+            <table class="table table-hover align-middle datatable">
+              <thead>
+                <tr>
+                  <th>Requested Date</th>
+                  <th>Product Details</th>
+                  <th class="text-end">Qty</th>
+                  <th>From (Source)</th>
+                  <th>To (Destination)</th>
+                  <th>Status</th>
+                  <% if (role !== 'Staff User') { %>
+                    <th class="text-end">Actions</th>
+                  <% } %>
+                </tr>
+              </thead>
+              <tbody>
+                <% transfers.forEach(t => { %>
+                  <tr>
+                    <td class="small text-muted"><%= new Date(t.createdAt).toLocaleDateString('en-IN') %></td>
+                    <td>
+                      <div class="fw-bold"><%= t.product_id.item_name %></div>
+                      <small class="text-muted">Design: <%= t.product_id.design_no %> | Size: <%= t.product_id.size %></small>
+                    </td>
+                    <td class="text-end fw-bold text-primary px-3"><%= t.quantity %></td>
+                    <td><span class="small fw-semibold text-secondary"><%= t.from_branch.branch_name %></span></td>
+                    <td><span class="small fw-semibold text-secondary"><%= t.to_branch.branch_name %></span></td>
+                    <td>
+                      <% 
+                        let badgeClass = 'bg-secondary';
+                        if (t.status === 'Pending') badgeClass = 'bg-warning text-dark';
+                        if (t.status === 'Approved') badgeClass = 'bg-info text-dark';
+                        if (t.status === 'Picked') badgeClass = 'bg-secondary text-white';
+                        if (t.status === 'In Transit') badgeClass = 'bg-primary';
+                        if (t.status === 'Delivered') badgeClass = 'bg-success';
+                        if (t.status === 'Rejected') badgeClass = 'bg-danger';
+                      %>
+                      <span class="badge <%= badgeClass %> px-2.5 py-1.5"><%= t.status %></span>
+                    </td>
+                    <% if (role !== 'Staff User') { %>
+                      <td class="text-end">
+                        <div class="btn-group btn-group-sm" role="group">
+                          <!-- Supplying Branch Manager Actions -->
+                          <% if (role === 'Super Admin' || (userBranchId && userBranchId === t.from_branch._id.toString())) { %>
+                            <% if (t.status === 'Pending') { %>
+                              <button class="btn btn-success" onclick="updateStatus('<%= t._id %>', 'Approved')" title="Approve Transfer"><i class="bi bi-check-lg"></i></button>
+                              <button class="btn btn-danger" onclick="updateStatus('<%= t._id %>', 'Rejected')" title="Reject Transfer"><i class="bi bi-x-lg"></i></button>
+                            <% } %>
+                            <% if (t.status === 'Approved') { %>
+                              <button class="btn btn-secondary" onclick="updateStatus('<%= t._id %>', 'Picked')"><i class="bi bi-box-seam me-1"></i>Pick</button>
+                            <% } %>
+                            <% if (t.status === 'Picked') { %>
+                              <button class="btn btn-primary" onclick="updateStatus('<%= t._id %>', 'In Transit')"><i class="bi bi-truck me-1"></i>Ship</button>
+                            <% } %>
+                          <% } %>
+
+                          <!-- Receiving Branch Manager Actions -->
+                          <% if (role === 'Super Admin' || (userBranchId && userBranchId === t.to_branch._id.toString())) { %>
+                            <% if (t.status === 'In Transit') { %>
+                              <button class="btn btn-success" onclick="updateStatus('<%= t._id %>', 'Delivered')"><i class="bi bi-house-check me-1"></i>Receive</button>
+                            <% } %>
+                          <% } %>
+                        </div>
+                      </td>
+                    <% } %>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Request Stock Modal (Hidden by Default) -->
+<% if (role !== 'Staff User') { %>
+  <div class="modal fade" id="requestStockModal" tabindex="-1" aria-labelledby="requestStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius: 16px; border: none; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+        <div class="modal-header border-0 bg-light p-4 pb-3">
+          <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="requestStockModalLabel">
+            <i class="bi bi-patch-question-fill text-primary fs-4"></i> Request Stock
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4 pt-3">
+          <form action="/transfers/create" method="POST">
+            
+            <div class="mb-3">
+              <label for="product_id" class="form-label fw-semibold">Select Product</label>
+              <select class="form-select" id="product_id" name="product_id" required>
+                <option value="" disabled selected>Choose product...</option>
+                <% products.forEach(p => { %>
+                  <option value="<%= p._id %>"><%= p.item_name %> (Design: <%= p.design_no %>, Size: <%= p.size %>)</option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="from_branch" class="form-label fw-semibold">Request From (Supplying Branch)</label>
+              <select class="form-select" id="from_branch" name="from_branch" required>
+                <option value="" disabled selected>Choose supplying branch...</option>
+                <% branches.forEach(b => { %>
+                  <% if (role === 'Super Admin' || b._id.toString() !== userBranchId) { %>
+                    <option value="<%= b._id %>"><%= b.branch_name %> (<%= b.city %>)</option>
+                  <% } %>
+                <% }) %>
+              </select>
+            </div>
+
+            <% if (role === 'Super Admin') { %>
+              <div class="mb-3">
+                <label for="to_branch" class="form-label fw-semibold">Deliver To (Receiving Branch)</label>
+                <select class="form-select" id="to_branch" name="to_branch" required>
+                  <option value="" disabled selected>Choose receiving branch...</option>
+                  <% branches.forEach(b => { %>
+                    <option value="<%= b._id %>"><%= b.branch_name %> (<%= b.city %>)</option>
+                  <% }) %>
+                </select>
+              </div>
+            <% } else { %>
+              <input type="hidden" name="to_branch" value="<%= userBranchId %>">
+            <% } %>
+
+            <div class="mb-4">
+              <label for="quantity" class="form-label fw-semibold">Requested Quantity</label>
+              <input type="number" class="form-control" id="quantity" name="quantity" min="1" placeholder="e.g. 5" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2.5 fw-semibold" style="border-radius: 8px;">
+              <i class="bi bi-send-fill me-2"></i>Send Stock Request
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+<% } %>
+
+<script>
+  function updateStatus(id, newStatus) {
+    if (!confirm(`Are you sure you want to change the transfer status to "${newStatus}"?`)) {
+      return;
+    }
+
+    fetch(`/transfers/${id}/status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ status: newStatus })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert(data.message);
+        window.location.reload();
+      } else {
+        alert('Error: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error updating status:', error);
+      alert('Failed to update status. Please try again.');
+    });
+  }
+
+  // Pre-fill and lock supplying branch based on recommendation query params
+  document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('product_id');
+    const fromBranchId = urlParams.get('from_branch');
+    const quantity = urlParams.get('quantity');
+
+    if (productId && fromBranchId) {
+      // 1. Pre-select product
+      const productSelect = document.getElementById('product_id');
+      if (productSelect) {
+        productSelect.value = productId;
+      }
+
+      // 2. Remove all supplying branches except the recommended one
+      const fromBranchSelect = document.getElementById('from_branch');
+      if (fromBranchSelect) {
+        Array.from(fromBranchSelect.options).forEach(opt => {
+          if (opt.value && opt.value !== fromBranchId) {
+            opt.remove(); 
+          }
+        });
+        fromBranchSelect.value = fromBranchId;
+      }
+
+      // 3. Pre-fill quantity
+      const quantityInput = document.getElementById('quantity');
+      if (quantityInput && quantity) {
+        quantityInput.value = quantity;
+      }
+
+      // 4. Show the Request Stock Modal immediately
+      const modalEl = document.getElementById('requestStockModal');
+      if (modalEl) {
+        const requestModal = new bootstrap.Modal(modalEl);
+        requestModal.show();
+      }
+    }
+  });
+</script>
+
+<%- include('../partials/footer') %>

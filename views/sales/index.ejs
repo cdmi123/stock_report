@@ -1,0 +1,233 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-3 p-md-4 fade-in-up">
+    <div class="page-header">
+      <h4 class="fw-bold"><i class="bi bi-cart-fill me-2 text-primary"></i>Sales Transaction Ledger</h4>
+      
+      <% if (role !== 'Staff User') { %>
+        <a href="/sales/upload" class="btn btn-primary btn-sm px-3 py-2"><i class="bi bi-file-earmark-plus-fill me-2"></i>Upload Daily Sales</a>
+      <% } %>
+    </div>
+
+    <!-- Filter Card (Super Admin only) -->
+    <% if (role === 'Super Admin') { %>
+      <div class="erp-card mb-4">
+        <form action="/sales" method="GET" class="row g-3 align-items-end">
+          <div class="col-md-8">
+            <label for="branchId" class="form-label fw-semibold small text-muted text-uppercase">Filter by Branch</label>
+            <select class="form-select" id="branchId" name="branchId">
+              <option value="">All Branches</option>
+              <% branches.forEach(b => { %>
+                <option value="<%= b._id %>" <%= selectedBranch === b._id.toString() ? 'selected' : '' %>><%= b.branch_name %> (<%= b.city %>)</option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <button type="submit" class="btn btn-primary w-100 py-2"><i class="bi bi-funnel-fill me-1"></i>Filter Sales</button>
+          </div>
+        </form>
+      </div>
+    <% } %>
+
+    <!-- Sales Table Card -->
+    <div class="erp-card shadow-sm" style="border-radius: 16px;">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Item Name</th>
+              <th>Design No</th>
+              <th>Size</th>
+              <th>Colour</th>
+              <th>Branch</th>
+              <th class="text-end">Sold Qty</th>
+              <th class="text-end">Rate</th>
+              <th class="text-end">Total Revenue</th>
+              <th class="text-end">Replenishment</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% sales.forEach(sale => { %>
+              <tr id="sale-row-<%= sale._id %>">
+                <td class="small text-muted"><%= new Date(sale.sale_date).toLocaleString('en-IN') %></td>
+                <td class="fw-bold"><%= sale.product_id ? sale.product_id.item_name : 'Unknown Product' %></td>
+                <td><span class="badge bg-secondary bg-opacity-25 text-dark font-monospace"><%= sale.product_id ? sale.product_id.design_no : 'N/A' %></span></td>
+                <td class="fw-semibold"><%= sale.product_id ? sale.product_id.size : 'N/A' %></td>
+                <td><%= (sale.product_id && sale.product_id.colour) || '-' %></td>
+                <td>
+                  <span class="small fw-semibold text-secondary">
+                    <i class="bi bi-geo-alt-fill me-1 small"></i><%= sale.branch_id ? sale.branch_id.branch_name : 'Unknown' %>
+                  </span>
+                </td>
+                <td class="text-end fw-bold text-primary"><%= sale.quantity %></td>
+                <td class="text-end">₹<%= sale.rate.toFixed(2) %></td>
+                <td class="text-end fw-semibold text-success">
+                  ₹<%= (sale.quantity * sale.rate).toLocaleString('en-IN') %>
+                </td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-outline-primary px-1" onclick="checkAlternativeStock('<%= sale._id %>')" style="border-radius: 6px;" id="check-btn-<%= sale._id %>">
+                    <i class="bi bi-shield-check"></i> Stock Check
+                  </button>
+                </td>
+              </tr>
+              <!-- Collapsible Availability Panel -->
+              <tr id="availability-row-<%= sale._id %>" class="d-none bg-light table-light">
+                <td colspan="11" class="p-3 border-top-0">
+                  <div id="availability-content-<%= sale._id %>" class="p-3 bg-white border rounded shadow-sm" style="max-width: 600px; margin-left: 20px;">
+                    <div class="d-flex justify-content-center py-2">
+                      <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sales Table Card -->
+   
+
+  </div>
+</div>
+
+<script>
+  function checkAlternativeStock(saleId) {
+    const row = document.getElementById('availability-row-' + saleId);
+    const content = document.getElementById('availability-content-' + saleId);
+    const btn = document.getElementById('check-btn-' + saleId);
+
+    // Toggle collapse
+    if (!row.classList.contains('d-none')) {
+      row.classList.add('d-none');
+      btn.classList.remove('active');
+      btn.innerHTML = '<i class="bi bi-shield-check"></i> Stock Check';
+      return;
+    }
+
+    // Show row and load via AJAX
+    row.classList.remove('d-none');
+    btn.classList.add('active');
+    btn.innerHTML = '<i class="bi bi-shield-check"></i> Hide Check';
+
+    // Show loader
+    content.innerHTML = `
+      <div class="d-flex justify-content-center py-3">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+      </div>
+    `;
+
+    fetch('/sales/' + saleId + '/availability')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) {
+          content.innerHTML = `<div class="alert alert-danger mb-0 p-2 text-center" style="font-size: 0.85rem;"><i class="bi bi-x-circle me-1"></i> ${data.message}</div>`;
+          return;
+        }
+
+        const p = data.product;
+        const cb = data.currentBranch;
+        const abList = data.availableBranches;
+        const rec = data.recommendedBranch;
+
+        // Build priority list HTML
+        let branchesHTML = '';
+        if (abList && abList.length > 0) {
+          abList.forEach(ab => {
+            let medal = '📦';
+            let badgeClass = 'bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25';
+            
+            if (ab.priority === 1) {
+              medal = '🥇';
+              badgeClass = 'bg-warning bg-opacity-15 text-warning border border-warning border-opacity-25';
+            } else if (ab.priority === 2) {
+              medal = '🥈';
+              badgeClass = 'bg-secondary bg-opacity-15 text-secondary border border-secondary border-opacity-25';
+            } else if (ab.priority === 3) {
+              medal = '🥉';
+              badgeClass = 'bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25';
+            }
+
+            branchesHTML += `
+              <div class="d-flex align-items-center justify-content-between border rounded p-2 mb-2 bg-light">
+                <div class="d-flex align-items-center">
+                  <span class="fs-5 me-2">${medal}</span>
+                  <div>
+                    <strong style="font-size: 0.85rem;">${ab.branch_name}</strong>
+                    <small class="text-muted d-block" style="font-size: 0.7rem;">Priority: ${ab.priority}</small>
+                  </div>
+                </div>
+                <span class="badge ${badgeClass} font-monospace">${ab.quantity} pcs</span>
+              </div>
+            `;
+          });
+        } else {
+          branchesHTML = `<div class="text-muted text-center py-2" style="font-size: 0.8rem;"><i class="bi bi-slash-circle me-1"></i> No other branches carry this item in stock.</div>`;
+        }
+
+        // Build Recommended Box HTML
+        let recHTML = '';
+        if (rec) {
+          const transferUrl = `/transfers?product_id=${p._id}&from_branch=${rec.branch_id}&quantity=${p.sold_quantity}`;
+          recHTML = `
+            <div class="mt-3 p-3 rounded" style="background-color: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.15);">
+              <span class="text-muted d-block small text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.05rem;">Recommended Source</span>
+              <strong class="text-primary d-block mt-0.5" style="font-size: 0.95rem;"><i class="bi bi-star-fill me-1 text-warning"></i>${rec.branch_name}</strong>
+              <small class="text-muted d-block mt-0.5">Sufficient stock available (${rec.quantity} pcs)</small>
+              <div class="mt-2.5">
+                <a href="${transferUrl}" class="btn btn-xs btn-primary font-semibold py-1.5 px-3" style="font-size: 0.75rem; border-radius: 6px;">
+                  <i class="bi bi-shuffle me-1"></i> Request Staging Transfer
+                </a>
+              </div>
+            </div>
+          `;
+        } else {
+          recHTML = `
+            <div class="mt-3 alert alert-danger mb-0 p-2 text-center" style="font-size: 0.85rem;">
+              <i class="bi bi-exclamation-octagon me-1"></i> Stock Unavailable globally. Alternate routing failed.
+            </div>
+          `;
+        }
+
+        content.innerHTML = `
+          <div class="row g-3">
+            <div class="col-md-5 border-end pe-3">
+              <span class="text-muted d-block small text-uppercase fw-bold mb-2" style="font-size: 0.65rem; letter-spacing: 0.05rem;">Replenishment Target</span>
+              <h6 class="fw-bold mb-1">${p.item_name}</h6>
+              <div class="small text-muted font-monospace mb-3">Design: ${p.design_no} | Size: ${p.size} | Color: ${p.colour}</div>
+              
+              <div class="d-flex align-items-center justify-content-between small text-secondary">
+                <span>Sold Quantity:</span>
+                <span class="fw-bold font-monospace text-dark">${p.sold_quantity} pcs</span>
+              </div>
+              <div class="d-flex align-items-center justify-content-between small text-secondary mt-1">
+                <span>Current Stock (${cb.branch_name.replace(' Branch', '')}):</span>
+                <span class="badge bg-light text-dark border font-monospace">${cb.quantity} Available</span>
+              </div>
+              
+              ${recHTML}
+            </div>
+            
+            <div class="col-md-7 ps-3">
+              <span class="text-muted d-block small text-uppercase fw-bold mb-2" style="font-size: 0.65rem; letter-spacing: 0.05rem;">Other Branch Stock Availability</span>
+              <div style="max-height: 230px; overflow-y: auto;">
+                ${branchesHTML}
+              </div>
+            </div>
+          </div>
+        `;
+      })
+      .catch(err => {
+        console.error('AJAX Error:', err);
+        content.innerHTML = `<div class="alert alert-danger mb-0 p-2 text-center" style="font-size: 0.85rem;"><i class="bi bi-exclamation-circle me-1"></i> Network request failed.</div>`;
+      });
+  }
+</script>
+
+<%- include('../partials/footer') %>

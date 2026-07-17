@@ -1,0 +1,139 @@
+<%- include('../partials/header') %>
+<%- include('../partials/sidebar') %>
+
+<div id="content-wrapper">
+  <%- include('../partials/navbar') %>
+
+  <div class="container-fluid p-3 p-md-4 fade-in-up">
+    <div class="row">
+      <div class="col-12">
+        <h4 class="fw-bold mb-4"><i class="bi bi-people-fill me-2 text-primary"></i>Manage System Users</h4>
+      </div>
+    </div>
+
+    <% if (error) { %>
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i><%= error %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+
+    <% if (success) { %>
+      <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i><%= success %>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    <% } %>
+
+    <div class="row">
+      <!-- Create User Form -->
+      <div class="col-lg-4 mb-4">
+        <div class="erp-card">
+          <h5 class="fw-bold mb-3"><i class="bi bi-person-plus-fill me-2 text-primary"></i>Add New User</h5>
+          <form action="/branches/users" method="POST">
+            <div class="mb-3">
+              <label for="name" class="form-label fw-semibold">Full Name</label>
+              <input type="text" class="form-control" id="name" name="name" placeholder="John Doe" required>
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label fw-semibold">Email Address</label>
+              <input type="email" class="form-control" id="email" name="email" placeholder="john@company.com" required>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label fw-semibold">Password</label>
+              <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+            </div>
+            <div class="mb-3">
+              <label for="role" class="form-label fw-semibold">Access Role</label>
+              <select class="form-select" id="role" name="role" required>
+                <option value="" disabled selected>Select a role...</option>
+                <option value="Super Admin">Super Admin</option>
+                <option value="Branch Manager">Branch Manager</option>
+                <option value="Staff User">Staff User</option>
+              </select>
+            </div>
+            <div class="mb-4" id="branch-select-group">
+              <label for="branch_id" class="form-label fw-semibold">Branch Assignment</label>
+              <select class="form-select" id="branch_id" name="branch_id">
+                <option value="" disabled selected>Select a branch...</option>
+                <% branches.forEach(b => { %>
+                  <option value="<%= b._id %>"><%= b.branch_name %> (<%= b.city %>)</option>
+                <% }) %>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2"><i class="bi bi-save me-2"></i>Create Account</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Users List -->
+      <div class="col-lg-8 mb-4">
+        <div class="erp-card">
+          <h5 class="fw-bold mb-3"><i class="bi bi-list-task me-2 text-success"></i>Registered Accounts</h5>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Assigned Branch</th>
+                  <th>Created At</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% users.forEach(u => { %>
+                  <tr>
+                    <td class="fw-bold"><%= u.name %></td>
+                    <td><%= u.email %></td>
+                    <td>
+                      <% let roleClass = 'bg-secondary'; %>
+                      <% if (u.role === 'Super Admin') roleClass = 'bg-danger'; %>
+                      <% if (u.role === 'Branch Manager') roleClass = 'bg-primary'; %>
+                      <% if (u.role === 'Staff User') roleClass = 'bg-info text-dark'; %>
+                      <span class="badge <%= roleClass %>"><%= u.role %></span>
+                    </td>
+                    <td>
+                      <% if (u.branch_id) { %>
+                        <span class="fw-semibold text-primary"><%= u.branch_id.branch_name %></span>
+                      <% } else { %>
+                        <span class="text-muted"><i class="bi bi-globe me-1"></i>All Branches</span>
+                      <% } %>
+                    </td>
+                    <td class="small text-muted"><%= new Date(u.createdAt).toLocaleDateString('en-IN') %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Dynamic User Branch assignment field visibility
+  document.addEventListener('DOMContentLoaded', function() {
+    const roleSelect = document.getElementById('role');
+    const branchGroup = document.getElementById('branch-select-group');
+    const branchSelect = document.getElementById('branch_id');
+
+    function toggleBranchField() {
+      if (roleSelect.value === 'Super Admin') {
+        branchGroup.style.display = 'none';
+        branchSelect.removeAttribute('required');
+        branchSelect.value = '';
+      } else {
+        branchGroup.style.display = 'block';
+        branchSelect.setAttribute('required', 'required');
+      }
+    }
+
+    roleSelect.addEventListener('change', toggleBranchField);
+    toggleBranchField(); // initial run
+  });
+</script>
+
+<%- include('../partials/footer') %>
