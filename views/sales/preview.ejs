@@ -43,7 +43,11 @@
             </tr>
           </thead>
           <tbody>
-            <% session.rows.forEach(row => { %>
+            <% const visibleRows = session.rows.filter(row => {
+              const hasNetworkStock = row.status === 'UNMATCHED' && row.product_id && row.available_branches && row.available_branches.length > 0;
+              return !(row.status === 'UNMATCHED' && !hasNetworkStock);
+            }); %>
+            <% visibleRows.forEach(row => { %>
               <% const isNetworkAvailable = row.status === 'UNMATCHED' && row.product_id && row.available_branches && row.available_branches.length > 0; %>
               <% const isNoProductInNetwork = row.status === 'UNMATCHED' && !isNetworkAvailable; %>
               <tr id="row-<%= row._id %>" class="<%= row.status === 'READY' ? 'table-success bg-opacity-5' : (isNetworkAvailable ? 'table-warning bg-opacity-5' : (row.status === 'UNMATCHED' ? 'table-danger bg-opacity-5' : '')) %>">
