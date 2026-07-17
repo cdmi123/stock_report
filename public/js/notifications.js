@@ -146,23 +146,8 @@
       return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
     };
 
-    const subscribeForPush = async () => {
-      if (!serviceWorkerRegistration || !config.vapidPublicKey || !('PushManager' in window)) {
-        return;
-      }
-
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        return;
-      }
-
-      const existingSubscription = await serviceWorkerRegistration.pushManager.getSubscription();
-      const subscription = existingSubscription || await serviceWorkerRegistration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: base64ToUint8Array(config.vapidPublicKey)
-      });
-
-      await fetch('/notifications/subscribe', {
+    const saveSubscription = async (subscription) => {
+      const response = await fetch('/notifications/subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,6 +155,39 @@
         },
         body: JSON.stringify(subscription)
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to save push subscription.');
+      }
+    };
+
+    const subscribeForPush = async (forcePrompt) => {
+      if (!serviceWorkerRegistration || !config.vapidPublicKey || !('PushManager' in window) || !('Notification' in window)) {
+        return false;
+      }
+
+      let permission = Notification.permission;
+      if (permission === 'default' && forcePrompt) {
+        permission = await Notification.requestPermission();
+      }
+
+      if (permission !== 'granted') {
+        return false;
+      }
+
+      const existingSubscription = await serviceWorkerRegistration.pushManager.getSubscription();
+      if (existingSubscription) {
+        await saveSubscription(existingSubscription.toJSON ? existingSubscription.toJSON() : existingSubscription);
+        return true;
+      }
+
+      const subscription = await serviceWorkerRegistration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: base64ToUint8Array(config.vapidPublicKey)
+      });
+
+      await saveSubscription(subscription.toJSON ? subscription.toJSON() : subscription);
+      return true;
     };
 
     const registerServiceWorker = async () => {
@@ -179,8 +197,8 @@
 
       try {
         serviceWorkerRegistration = await navigator.serviceWorker.register('/sw.js');
-        if (config.branchId && config.vapidPublicKey && 'Notification' in window && Notification.permission !== 'denied') {
-          await subscribeForPush();
+        if (config.branchId && config.vapidPublicKey) {
+          await subscribeForPush(false);
         }
       } catch (error) {
         console.error('Service worker registration failed:', error);
@@ -240,7 +258,12 @@
     }
 
     if (notifDropdownBtn) {
-      notifDropdownBtn.addEventListener('click', () => {
+      notifDropdownBtn.addEventListener('click', async () => {
+        try {
+          await subscribeForPush(true);
+        } catch (error) {
+          console.error('Push subscription setup failed:', error);
+        }
         markAllRead();
       });
     }
